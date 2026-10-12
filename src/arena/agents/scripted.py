@@ -13,6 +13,8 @@ from typing import Any
 
 from agent_framework import (
     BaseChatClient,
+    ChatMiddlewareLayer,
+    ChatMiddlewareTypes,
     ChatResponse,
     Content,
     FunctionInvocationLayer,
@@ -37,19 +39,26 @@ def tool_call(call_id: str, name: str, **arguments: Any) -> Content:
     return Content.from_function_call(call_id, name, arguments=json.dumps(arguments))
 
 
-class ScriptedChatClient(FunctionInvocationLayer[Any], BaseChatClient[Any]):
+class ScriptedChatClient(
+    FunctionInvocationLayer[Any], ChatMiddlewareLayer[Any], BaseChatClient[Any]
+):
     """Replays scripted replies. A reply is a list of text strings and tool calls."""
 
     OTEL_PROVIDER_NAME = "scripted"
 
     def __init__(
-        self, replies: Sequence[Sequence[Content | str]], *, max_iterations: int = 10
+        self,
+        replies: Sequence[Sequence[Content | str]],
+        *,
+        max_iterations: int = 10,
+        middleware: Sequence[ChatMiddlewareTypes] | None = None,
     ) -> None:
         super().__init__(
+            middleware=middleware,
             function_invocation_configuration={
                 "max_iterations": max_iterations,
                 "allow_concurrent_invocation": False,
-            }
+            },
         )
         self._replies: list[Sequence[Content | str]] = list(replies)
         self.requests: list[RecordedRequest] = []

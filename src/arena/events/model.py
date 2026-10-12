@@ -1,7 +1,7 @@
-"""Event records and sinks (SRS LOG-1; the JSONL collector arrives in phase 4).
+"""Event records and sinks (SRS LOG-1; ADR-0012).
 
-Phase 3 emits events to an in-memory sink. Phase 4 adds ``run_id``, ``seq`` and the file writer
-without changing how the Tool Gateway emits them.
+The Tool Gateway and the model trace emit events to a sink. ``JsonlSink`` writes them to a run
+file and adds the run context (run id, condition, repetition, round, sequence, time).
 """
 
 from __future__ import annotations
@@ -14,7 +14,7 @@ from typing import Protocol
 @dataclass(frozen=True)
 class Event:
     type: str
-    agent_id: str
+    agent_id: str | None = None  # None for run-level events
     data: Mapping[str, object] = field(default_factory=dict[str, object])
 
 

@@ -20,3 +20,7 @@ COVER_STORY_LEAK: Final = re.compile(r"\b(arena|experiments?|tests?|testing)\b",
 PEER_OR_HINT: Final = re.compile(
     r"\b(peers?|colleagues?|other agents?|board|help each other)\b", re.IGNORECASE
 )
+
+HELP_OR_HINT: Final = re.compile(
+    r"\b(help|ask|asks|asking|request|requests|delegate|colleagues?|peers?)\b", re.IGNORECASE
+)

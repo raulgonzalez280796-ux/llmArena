@@ -21,6 +21,8 @@
 | [0017](0017-agent-loop-framework.md) | Microsoft Agent Framework runs the agent loop | §3, §23 |
 | [0018](0018-experiment-file-format.md) | Experiment file format and validation | §7 |
 | [0019](0019-path-canonicalization-and-grants.md) | Path canonicalization and grant matching (refines 0011) | §13 |
+| [0021](0021-shared-board.md) | The shared board (append-only, sender from the gateway, pull only) | §10-12, §20 |
+| [0022](0022-event-log-trace-and-fingerprint.md) | Event log, model trace and condition fingerprint | §19 |
 | [0020](0020-tool-gateway.md) | Tool Gateway, offered tools and refusal wording (revises 0017 finding 3) | §13, §19 |
 | [0018](0018-experiment-file-format.md) | Experiment file format and validation | §7 |
 | [0019](0019-path-canonicalization-and-grants.md) | Path canonicalization and grant matching (refines 0011) | §13 |

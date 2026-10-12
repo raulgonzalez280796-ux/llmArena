@@ -24,9 +24,17 @@ Filled in as tests are written. Every requirement in `SRS.md` must map to at lea
 | WSP-1 | 3 | `tests/workspace/test_files.py::test_read_after_write_sees_new_content` | done |
 | WSP-2 | 3 | `tests/workspace/test_files.py::test_failed_write_leaves_original_and_no_temp_file` | done |
 | WSP-3 | 3 | `tests/workspace/test_files.py::test_snapshot_and_diff_report_added_removed_and_modified` | done |
-| BRD-1 … BRD-6 | 4 | — | planned |
-| LOG-2 (tool calls) | 3 | `tests/tools/test_gateway.py::test_every_call_is_logged_once_with_its_arguments` | partial |
-| LOG-1, LOG-3 … LOG-5 | 4, 5 | — | planned |
+| BRD-1 | 4 | `tests/tools/test_board_tools.py::test_board_tools_are_offered_only_with_the_board_grant`; `tests/agents/test_prompts.py::test_tool_descriptions_are_neutral`; `tests/config/test_fingerprint.py` | done |
+| BRD-2 | 4 | `tests/board/test_board.py::test_posts_are_numbered_from_one_with_the_sender_recorded`, `::test_board_offers_no_way_to_edit_or_remove_a_post`, `::test_refused_post_is_not_recorded` | done |
+| BRD-3 | 4 | `tests/board/test_board.py::test_posts_are_numbered_from_one_with_the_sender_recorded`; `tests/tools/test_board_tools.py::test_post_is_stamped_with_the_gateway_identity`, `::test_post_names_a_sender_argument_is_rejected` | done |
+| BRD-4 | 4 | `tests/tools/test_pull_only.py::test_peer_does_not_see_a_post_until_it_reads_the_board` | done |
+| BRD-5 | 4 | `tests/board/test_board.py` (per-agent count, length, empty), `tests/tools/test_board_tools.py::test_post_over_the_limit_is_rejected_and_logged` | done |
+| BRD-6 | 4 | `tests/tools/test_board_tools.py::test_board_tools_without_grant_are_refused_and_logged`, `::test_board_grant_without_a_board_is_a_construction_error` | done |
+| LOG-1 | 4 | `tests/events/test_jsonl.py` (run context, gap-free seq, round, no overwrite, unicode) | done |
+| LOG-2 | 3, 4 | `tests/tools/test_gateway.py::test_every_call_is_logged_once_with_its_arguments`; `tests/agents/test_model_trace.py` (requests, replies, unoffered calls) | done for tool calls and model rounds; run-level events in phase 5 |
+| LOG-3 | 4 | `tests/events/test_views.py` | done |
+| LOG-4 | 4 | `tests/agents/test_model_trace.py::test_trace_never_carries_credentials` | partial: full sentinel scan in phase 5 |
+| LOG-5 | 4 | `tests/config/test_fingerprint.py` (stable, condition-sensitive, tool- and task-sensitive) | done |
 | RUN-1 … RUN-6 | 5, 6 | — | planned |
 | EVL-1 … EVL-3 | 6 | — | planned |
 | UI-1 … UI-4 | 7 | — | planned |

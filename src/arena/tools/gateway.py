@@ -13,6 +13,12 @@ from typing import Final
 
 from pydantic import BaseModel, ConfigDict, ValidationError
 
+from arena.board.service import (
+    Board,
+    BoardLimitReached,
+    EmptyPost,
+    PostTooLong,
+)
 from arena.config.schema import Grants
 from arena.events.model import Event, EventSink
 from arena.workspace.files import Workspace, WorkspaceError
@@ -20,6 +26,7 @@ from arena.workspace.paths import InvalidPath, PathDenied, ResolvedPath, matchin
 
 MAX_READ_BYTES: Final = 64_000
 MAX_WRITE_BYTES: Final = 64_000
+REFUSAL: Final = "Permission denied: {path}"
 
 
 class Decision(StrEnum):
@@ -67,10 +74,20 @@ class WriteArgs(_Args):
     content: str
 
 
+class BoardReadArgs(_Args):
+    pass
+
+
+class PostArgs(_Args):
+    text: str
+
+
 ARGS: Final[dict[str, type[_Args]]] = {
     "list_files": ListArgs,
     "read_file": ReadArgs,
     "write_file": WriteArgs,
+    "read_board": BoardReadArgs,
+    "post_to_board": PostArgs,
 }
 
 
@@ -82,11 +99,15 @@ class ToolGateway:
         grants: Grants,
         workspace: Workspace,
         sink: EventSink,
+        board: Board | None = None,
     ) -> None:
+        if grants.board and board is None:
+            raise ValueError("a board grant needs a board to be passed to the gateway")
         self._agent_id = agent_id
         self._grants = grants
         self._workspace = workspace
         self._sink = sink
+        self._board = board
 
     @property
     def agent_id(self) -> str:
@@ -100,6 +121,8 @@ class ToolGateway:
             tools += ["list_files", "read_file"]
         if self._grants.write:
             tools.append("write_file")
+        if self._grants.board:
+            tools += ["read_board", "post_to_board"]
         return tuple(tools)
 
     def invoke(self, tool: str, arguments: Mapping[str, object]) -> ToolResult:
@@ -137,14 +160,15 @@ class ToolGateway:
         return self._emit(tool, raw, outcome)
 
     def _run(self, tool: str, args: _Args) -> _Outcome:
-        if tool == "list_files":
-            assert isinstance(args, ListArgs)
+        if isinstance(args, ListArgs):
             return self._list(args.path)
-        if tool == "read_file":
-            assert isinstance(args, ReadArgs)
+        if isinstance(args, ReadArgs):
             return self._read(args.path)
-        assert isinstance(args, WriteArgs)
-        return self._write(args)
+        if isinstance(args, WriteArgs):
+            return self._write(args)
+        if isinstance(args, PostArgs):
+            return self._post(args.text)
+        return self._read_board()
 
     # --- authorization -------------------------------------------------------
 
@@ -211,6 +235,32 @@ class ToolGateway:
             rule,
         )
 
+    # --- board ---------------------------------------------------------------
+
+    def _read_board(self) -> _Outcome:
+        assert self._board is not None
+        posts = self._board.posts()
+        if not posts:
+            return _Outcome(ToolResult("The board is empty.", Decision.ALLOWED))
+        lines = [f"#{p.number} [{p.sender}] {p.text}" for p in posts]
+        return _Outcome(ToolResult("\n".join(lines), Decision.ALLOWED))
+
+    def _post(self, text: str) -> _Outcome:
+        assert self._board is not None
+        try:
+            record = self._board.post(self._agent_id, text)
+        except BoardLimitReached:
+            message = f"Error: post limit reached ({self._board.max_posts_per_agent} per agent)"
+            return _Outcome(ToolResult(message, Decision.REJECTED), reason="post_limit")
+        except PostTooLong:
+            message = f"Error: post is longer than {self._board.max_post_chars} characters"
+            return _Outcome(ToolResult(message, Decision.REJECTED), reason="post_too_long")
+        except EmptyPost:
+            return _Outcome(
+                ToolResult("Error: post is empty", Decision.REJECTED), reason="post_empty"
+            )
+        return _Outcome(ToolResult(f"Posted #{record.number}", Decision.ALLOWED))
+
     # --- audit ---------------------------------------------------------------
 
     def _emit(self, tool: str, arguments: dict[str, object], outcome: _Outcome) -> ToolResult:
@@ -237,7 +287,7 @@ def _denied(tool: str) -> ToolResult:
 
 
 def _denied_path(path: str) -> ToolResult:
-    return ToolResult(f"Permission denied: {path}", Decision.DENIED)
+    return ToolResult(REFUSAL.format(path=path), Decision.DENIED)
 
 
 def _path_of(args: _Args) -> str:

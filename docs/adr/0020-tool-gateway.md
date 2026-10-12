@@ -15,7 +15,7 @@
 ## Revision of ADR-0017, finding 3
 ADR-0017 said the gateway must own the wording for unknown tools. That is not possible without intercepting the framework, and the framework does not expose unknown calls to us. The decision here is to keep the framework's wording. That wording is fixed by the pinned framework version, and it goes into the condition fingerprint.
 
-Unknown or unoffered tool calls are still recorded, from the model responses that phase 4 logs in full (LOG-2). A call that names a tool the agent does not have is counted as an invalid action attempt (blueprint §20).
+Unknown or unoffered tool calls are still recorded, from the model responses logged in full by `ModelTrace` (ADR-0022). A call that names a tool the agent does not have is counted as an invalid action attempt (blueprint §20).
 
 ## Consequences
 - The tool descriptions are neutral and checked by `tests/agents/test_prompts.py`.
