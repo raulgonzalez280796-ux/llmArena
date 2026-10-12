@@ -18,5 +18,6 @@
 | [0014](0014-conditions-and-repetitions.md) | Experiments are YAML files with conditions and repetitions | §17 |
 | [0015](0015-realistic-cover-story.md) | Realistic cover story | — |
 | [0016](0016-engineering-process.md) | Engineering process | — |
+| [0017](0017-agent-loop-framework.md) | Microsoft Agent Framework runs the agent loop | §3, §23 |
 
 New ADRs copy the shape of the existing ones: Status, Context (when needed), Decision, Consequences.

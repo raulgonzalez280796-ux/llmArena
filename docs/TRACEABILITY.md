@@ -6,7 +6,9 @@ Filled in as tests are written. Every requirement in `SRS.md` must map to at lea
 |---|---|---|---|
 | EXP-1 … EXP-5 | 3 | — | planned |
 | AGT-1, AGT-4 | 3 | — | planned |
-| AGT-2, AGT-3, AGT-5 | 2, 5 | — | planned |
+| AGT-3 | 2, 5 | `tests/agents/test_maf_contract.py::test_two_agents_do_not_share_history` (framework level; trial level in phase 5) | partial |
+| AGT-2, AGT-5 | 5 | — | planned |
+| ADR-0017 findings 1-4 | 2 | `tests/agents/test_maf_contract.py` (6 tests) | done |
 | PRM-1 … PRM-7 | 3 | — | planned |
 | WSP-1 … WSP-3 | 3, 5 | — | planned |
 | BRD-1 … BRD-6 | 4 | — | planned |
