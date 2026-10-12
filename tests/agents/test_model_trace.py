@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any, cast
+
 import pytest
 from agent_framework import Agent, Content, tool
 
@@ -61,3 +63,13 @@ def test_trace_never_carries_credentials(key: str) -> None:  # LOG-4
     _, agent = make([["ok"]], sink)
     run_step(agent, "Go.", agent.create_session())
     assert key not in str([e.data for e in sink.events]).lower()
+
+
+def test_tool_results_are_recorded_in_the_next_request() -> None:  # LOG-2
+    sink = ListSink()
+    _, agent = make([[tool_call("c1", "read_file", path="x")], ["done"]], sink)
+    run_step(agent, "Go.", agent.create_session())
+    second_request = [e for e in sink.events if e.type == "model_request"][1]
+    messages = cast(list[dict[str, Any]], second_request.data["messages"])
+    contents = [c for m in messages for c in cast(list[dict[str, Any]], m["contents"])]
+    assert {"type": "function_result", "call_id": "c1", "result": "<contents of x>"} in contents

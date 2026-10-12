@@ -30,12 +30,17 @@ Filled in as tests are written. Every requirement in `SRS.md` must map to at lea
 | BRD-4 | 4 | `tests/tools/test_pull_only.py::test_peer_does_not_see_a_post_until_it_reads_the_board` | done |
 | BRD-5 | 4 | `tests/board/test_board.py` (per-agent count, length, empty), `tests/tools/test_board_tools.py::test_post_over_the_limit_is_rejected_and_logged` | done |
 | BRD-6 | 4 | `tests/tools/test_board_tools.py::test_board_tools_without_grant_are_refused_and_logged`, `::test_board_grant_without_a_board_is_a_construction_error` | done |
-| LOG-1 | 4 | `tests/events/test_jsonl.py` (run context, gap-free seq, round, no overwrite, unicode) | done |
+| LOG-1 | 4, 5 | `tests/events/test_jsonl.py` (run context, gap-free seq, round, no overwrite, unicode) | done |
 | LOG-2 | 3, 4 | `tests/tools/test_gateway.py::test_every_call_is_logged_once_with_its_arguments`; `tests/agents/test_model_trace.py` (requests, replies, unoffered calls) | done for tool calls and model rounds; run-level events in phase 5 |
 | LOG-3 | 4 | `tests/events/test_views.py` | done |
-| LOG-4 | 4 | `tests/agents/test_model_trace.py::test_trace_never_carries_credentials` | partial: full sentinel scan in phase 5 |
+| LOG-4 | 4, 5 | `tests/agents/test_model_trace.py::test_trace_never_carries_credentials`; `tests/runner/test_trial.py::test_no_credential_value_reaches_any_run_file` | done for the dry-run path; real providers must add their own check in phase 8 |
 | LOG-5 | 4 | `tests/config/test_fingerprint.py` (stable, condition-sensitive, tool- and task-sensitive) | done |
-| RUN-1 … RUN-6 | 5, 6 | — | planned |
+| RUN-1 | 5 | `tests/runner/test_trial.py::test_the_seeded_order_is_logged_and_repeatable`, `tests/runner/test_batch.py::test_the_plan_is_repeatable_for_a_seed_and_differs_between_seeds` | done |
+| RUN-2 | 5 | `test_each_trial_starts_from_a_clean_workspace_and_board`, `test_a_run_directory_is_never_reused` | done |
+| RUN-3 | 5 | `test_stops_at_max_rounds_when_nobody_finishes`, `test_stops_when_the_token_cap_is_reached`, `test_finished_agent_takes_no_further_steps`, `test_an_agent_that_finishes_early_stops_while_others_continue`, `test_two_agents_complete_the_core_scenario` (all_finished) | done |
+| RUN-4 | 5 | `tests/runner/test_batch.py` (plan only; batch execution is phase 6) | partial |
+| RUN-5 | 5 | `test_provider_failure_is_logged_and_stops_the_trial` (no retry yet) | partial |
+| RUN-6 | 5 | `test_cancelling_the_run_stops_the_model_calls` | done |
 | EVL-1 … EVL-3 | 6 | — | planned |
 | UI-1 … UI-4 | 7 | — | planned |
 | NFR-1 … NFR-5 | all | — | planned |
@@ -51,8 +56,8 @@ Filled in as tests are written. Every requirement in `SRS.md` must map to at lea
 | 5 concurrent writes with same expected_version | deferred: one writer per file in v1, rounds are sequential | — |
 | 6 duplicate request_id executed once | dropped: no request routing (ADR-0005) | — |
 | 7 unknown recipient returns an error | adapted: unknown tool or malformed board call returns an error | PRM-1, BRD-1 |
-| 8 helper failure or timeout delivered and logged | adapted: provider errors logged apart from behaviour | RUN-5 |
-| 9 reset gives fresh workspace and histories | phase 5 | RUN-2 |
+| 8 helper failure or timeout delivered and logged | adapted: provider failures logged and stop the trial; retry not built | RUN-5 |
+| 9 reset gives fresh workspace and histories | done (`test_each_trial_starts_from_a_clean_workspace_and_board`) | RUN-2 |
 | 10 evaluator catches a false success claim | kept | EVL-1 |
-| 11 cancellation stops sub-work | kept | RUN-6 |
+| 11 cancellation stops sub-work | done (`test_cancelling_the_run_stops_the_model_calls`) | RUN-6 |
 | 12 execution cannot write indirectly | not applicable: no execution in v1 (ADR-0010) | — |

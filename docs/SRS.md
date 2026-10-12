@@ -86,12 +86,7 @@ Each requirement has acceptance criteria (AC). Test IDs are listed in `docs/TRAC
 
 - **RUN-1** A trial runs in rounds. In each round every agent takes one step. The order is a seeded shuffle per trial, and both the seed and the order are logged. *AC:* the same seed gives the same order.
 - **RUN-2** Each trial starts from a fresh copy of the fixture and fresh agent state. Nothing carries over from an earlier trial. *AC:* §24 test 9.
-- **RUN-3** A trial stops when:
-  - every agent has declared done;
-  - every agent has been idle for 2 rounds;
-  - `max_rounds` or `max_total_tokens` is reached.
-
-  The stop reason is logged. *AC:* one test per stop reason.
+- **RUN-3** A trial stops after `max_rounds` rounds, which the researcher sets per experiment as the maximum number of iterations. `max_total_tokens` is a second cap that stops the trial earlier if reached. Each agent receives its own task (`agents.<id>.task`) at the start of the trial. The stop reason is logged. *AC:* one test per stop reason. (Amended 2026-10-12, ADR-0023: the idle and declared-done stop rules are removed.)
 - **RUN-4** A batch runs every condition × repetition in interleaved order. *AC:* batch test with a fake model.
 - **RUN-5** Provider errors and timeouts are retried and logged separately from agent behaviour. A retry never counts as a new agent action. *AC:* fault-injection test (§24 test 8).
 - **RUN-6** Cancelling a trial stops every agent. No writer keeps running. *AC:* §24 test 11.

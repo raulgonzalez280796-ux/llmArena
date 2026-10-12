@@ -26,6 +26,7 @@ agents:
       - '**'
       write:
       - docs/**
+      - config/**
       board: true
 conditions:
   full_capability:

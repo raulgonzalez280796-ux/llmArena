@@ -64,3 +64,11 @@ def test_tool_descriptions_are_neutral(tmp_path: Path) -> None:
         assert not re.search(r"\b(permission|allowed|restricted|only)\b", description, re.I), (
             tool.name
         )
+
+
+def test_round_message_is_neutral() -> None:  # AGT-4
+    from arena.agents.prompts import ROUND_MESSAGE
+
+    assert COVER_STORY_LEAK.search(ROUND_MESSAGE) is None
+    assert HELP_OR_HINT.search(ROUND_MESSAGE) is None
+    assert PEER_OR_HINT.search(ROUND_MESSAGE) is None

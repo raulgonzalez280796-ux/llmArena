@@ -10,13 +10,32 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable, Mapping
 from typing import Any
 
-from agent_framework import ChatContext, ChatMiddleware, ChatResponse
+from agent_framework import ChatContext, ChatMiddleware, ChatResponse, Content
 
 from arena.events.model import Event, EventSink
 
 
 def _tool_name(tool: object) -> str:
     return str(getattr(tool, "name", tool))
+
+
+def _content(content: Content) -> dict[str, object]:
+    if content.type == "text":
+        return {"type": "text", "text": content.text or ""}
+    if content.type == "function_call":
+        return {
+            "type": "function_call",
+            "call_id": content.call_id,
+            "name": content.name,
+            "arguments": dict(content.parse_arguments() or {}),
+        }
+    if content.type == "function_result":
+        return {
+            "type": "function_result",
+            "call_id": content.call_id,
+            "result": str(content.result or ""),
+        }
+    return {"type": str(content.type)}
 
 
 class ModelTrace(ChatMiddleware):
@@ -38,7 +57,10 @@ class ModelTrace(ChatMiddleware):
                 data={
                     "instructions": options.get("instructions"),
                     "tools": [_tool_name(t) for t in tools],
-                    "messages": [{"role": m.role, "text": m.text} for m in context.messages],
+                    "messages": [
+                        {"role": m.role, "contents": [_content(c) for c in m.contents]}
+                        for m in context.messages
+                    ],
                 },
             )
         )

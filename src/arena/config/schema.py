@@ -8,7 +8,7 @@ an override that names a field which does not exist is an error.
 from __future__ import annotations
 
 import re
-from typing import Any, Literal, Self, cast
+from typing import Any, Final, Literal, Self, cast
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -17,6 +17,7 @@ from arena.workspace.paths import validate_glob
 AGENT_ID = re.compile(r"^[a-z][a-z0-9_]{0,31}$")
 NAME = re.compile(r"^[a-z][a-z0-9_]{0,63}$")
 ENV_VAR = re.compile(r"^[A-Z][A-Z0-9_]{0,63}$")
+BASE_CONDITION: Final = "base"
 FIXTURE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
 
 
@@ -105,6 +106,10 @@ class Experiment(_Strict):
         for name in conditions:
             if not NAME.match(name):
                 raise ValueError(f"condition name must be a lowercase name: {name!r}")
+            if name == BASE_CONDITION:
+                raise ValueError(
+                    f"condition name {name!r} is reserved for the unchanged experiment"
+                )
         return conditions
 
     @model_validator(mode="after")

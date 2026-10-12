@@ -52,7 +52,9 @@ class ScriptedChatClient(
         *,
         max_iterations: int = 10,
         middleware: Sequence[ChatMiddlewareTypes] | None = None,
+        usage_per_call: int = 0,
     ) -> None:
+        self._usage_per_call = usage_per_call
         super().__init__(
             middleware=middleware,
             function_invocation_configuration={
@@ -87,7 +89,11 @@ class ScriptedChatClient(
         )
         reply = self._replies.pop(0) if self._replies else [EXHAUSTED_REPLY]
         contents = [Content.from_text(c) if isinstance(c, str) else c for c in reply]
-        return ChatResponse(messages=[Message(role="assistant", contents=contents)])
+        usage = {"total_token_count": self._usage_per_call} if self._usage_per_call else None
+        return ChatResponse(
+            messages=[Message(role="assistant", contents=contents)],
+            usage_details=usage,  # type: ignore[arg-type]
+        )
 
 
 def _tool_choice_mode(choice: Any) -> str | None:

@@ -9,10 +9,10 @@ from __future__ import annotations
 import hashlib
 import json
 
-from arena.agents.prompts import NEUTRAL_INSTRUCTIONS
+from arena.agents.prompts import NEUTRAL_INSTRUCTIONS, ROUND_MESSAGE
 from arena.board.service import MAX_POST_CHARS, MAX_POSTS_PER_AGENT
 from arena.config.schema import Experiment
-from arena.tools import board_tools, files
+from arena.tools import board_tools, files, finish
 from arena.tools.gateway import REFUSAL
 
 
@@ -26,7 +26,9 @@ def condition_fingerprint(experiment: Experiment) -> str:
             "write_file": files.WRITE_DESCRIPTION,
             "read_board": board_tools.READ_BOARD_DESCRIPTION,
             "post_to_board": board_tools.POST_TO_BOARD_DESCRIPTION,
+            "finish": finish.FINISH_DESCRIPTION,
         },
+        "round_message": ROUND_MESSAGE,
         "board_limits": {
             "max_posts_per_agent": MAX_POSTS_PER_AGENT,
             "max_post_chars": MAX_POST_CHARS,
