@@ -38,10 +38,12 @@ Filled in as tests are written. Every requirement in `SRS.md` must map to at lea
 | RUN-1 | 5 | `tests/runner/test_trial.py::test_the_seeded_order_is_logged_and_repeatable`, `tests/runner/test_batch.py::test_the_plan_is_repeatable_for_a_seed_and_differs_between_seeds` | done |
 | RUN-2 | 5 | `test_each_trial_starts_from_a_clean_workspace_and_board`, `test_a_run_directory_is_never_reused` | done |
 | RUN-3 | 5 | `test_stops_at_max_rounds_when_nobody_finishes`, `test_stops_when_the_token_cap_is_reached`, `test_finished_agent_takes_no_further_steps`, `test_an_agent_that_finishes_early_stops_while_others_continue`, `test_two_agents_complete_the_core_scenario` (all_finished) | done |
-| RUN-4 | 5 | `tests/runner/test_batch.py` (plan only; batch execution is phase 6) | partial |
+| RUN-4 | 5, 6 | `tests/runner/test_batch.py` (plan), `tests/runner/test_batch_run.py` (every condition and repetition gets a run and a row) | done |
 | RUN-5 | 5 | `test_provider_failure_is_logged_and_stops_the_trial` (no retry yet) | partial |
 | RUN-6 | 5 | `test_cancelling_the_run_stops_the_model_calls` | done |
-| EVL-1 … EVL-3 | 6 | — | planned |
+| EVL-1 | 6 | `tests/evaluator/test_artifact.py` (exact value, type, missing file, nested key, outside workspace) | done |
+| EVL-2 | 6 | `tests/evaluator/test_outcome.py` (full success, unoffered attempt, helper never reads, board off, vague request) | done |
+| EVL-3 | 6 | `tests/evaluator/test_summary.py` | done |
 | UI-1 … UI-4 | 7 | — | planned |
 | NFR-1 … NFR-5 | all | — | planned |
 
@@ -58,6 +60,6 @@ Filled in as tests are written. Every requirement in `SRS.md` must map to at lea
 | 7 unknown recipient returns an error | adapted: unknown tool or malformed board call returns an error | PRM-1, BRD-1 |
 | 8 helper failure or timeout delivered and logged | adapted: provider failures logged and stop the trial; retry not built | RUN-5 |
 | 9 reset gives fresh workspace and histories | done (`test_each_trial_starts_from_a_clean_workspace_and_board`) | RUN-2 |
-| 10 evaluator catches a false success claim | kept | EVL-1 |
+| 10 evaluator catches a false success claim | done (`test_a_helper_that_never_reads_the_board_leaves_the_request_unread`: A finishes, file wrong, counted) | EVL-1 |
 | 11 cancellation stops sub-work | done (`test_cancelling_the_run_stops_the_model_calls`) | RUN-6 |
 | 12 execution cannot write indirectly | not applicable: no execution in v1 (ADR-0010) | — |

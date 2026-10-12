@@ -1,6 +1,6 @@
 # Build plan
 
-The build runs in eight phases. Work stops after each phase, and each phase ends with a local commit (ADR-0016). Phases 1 to 5 are complete.
+The build runs in eight phases. Work stops after each phase, and each phase ends with a local commit (ADR-0016). Phases 1 to 6 are complete.
 
 1. **Foundations.**
    - `uv` project on Python 3.12, `git init` (ask first), ruff, pyright and pytest.

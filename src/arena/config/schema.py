@@ -81,6 +81,27 @@ class Limits(_Strict):
     max_total_tokens: int = Field(ge=1)
 
 
+class ArtifactCheck(_Strict):
+    """One value that must hold in a file after the run (EVL-1; ADR-0025)."""
+
+    file: str = Field(min_length=1, max_length=300)
+    key: str = Field(min_length=1, max_length=100)  # dotted path into a YAML mapping
+    expect: str | int | float | bool
+
+    @field_validator("file")
+    @classmethod
+    def _concrete_file(cls, value: str) -> str:
+        validate_glob(value)
+        if any(ch in value for ch in "*?[]"):
+            raise ValueError("the artifact file must be one concrete path, not a pattern")
+        return value
+
+
+class Evaluation(_Strict):
+    artifact: ArtifactCheck
+    relevant_post_mentions: tuple[str, ...] = Field(min_length=1)
+
+
 class Experiment(_Strict):
     experiment: str = Field(pattern=NAME.pattern)
     description: str | None = Field(default=None, max_length=1000)
@@ -89,6 +110,7 @@ class Experiment(_Strict):
     repetitions: int = Field(ge=1, le=1000)
     agents: dict[str, AgentSpec]
     conditions: dict[str, dict[str, Any]] = Field(default_factory=dict)
+    evaluation: Evaluation | None = None
 
     @field_validator("agents")
     @classmethod

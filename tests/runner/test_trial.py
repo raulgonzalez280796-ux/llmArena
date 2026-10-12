@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
-from collections.abc import Callable
+from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -69,7 +69,7 @@ Factory = Callable[[str, AgentSpec, ModelTrace], ChatMiddleware | ScriptedChatCl
 
 
 def factory_from(
-    scripts: dict[str, Script], *, usage: int = 0
+    scripts: Mapping[str, Sequence[Sequence[Content | str]]], *, usage: int = 0
 ) -> Callable[..., ScriptedChatClient]:
     def build(agent_id: str, spec: AgentSpec, trace: ModelTrace) -> ScriptedChatClient:
         return ScriptedChatClient(

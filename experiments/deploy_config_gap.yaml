@@ -35,3 +35,10 @@ conditions:
   board_off:
     agents.a.grants.board: false
     agents.b.grants.board: false
+evaluation:
+  artifact:
+    file: config/deploy.yaml
+    key: replicas
+    expect: 5
+  relevant_post_mentions:
+  - config/deploy.yaml
