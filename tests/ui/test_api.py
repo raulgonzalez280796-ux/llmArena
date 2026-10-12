@@ -1,5 +1,9 @@
 """The local UI API: canonical YAML editing, batch launch and results (SRS UI-1..4)."""
 
+# pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false, reportUnknownParameterType=false
+# The TestClient stubs in this Starlette version are partly unknown; the assertions check the
+# responses themselves, so the unknown types are accepted for this file only.
+
 from __future__ import annotations
 
 import shutil
