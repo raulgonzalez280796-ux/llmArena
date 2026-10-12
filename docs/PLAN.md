@@ -1,6 +1,6 @@
 # Build plan
 
-The build runs in eight phases. Work stops after each phase, and each phase ends with a local commit (ADR-0016). Phases 1 to 7 are complete. Phase 8 waits for the researcher's decisions on models, keys and cost cap.
+The build runs in eight phases. Work stops after each phase, and each phase ends with a local commit (ADR-0016). Phases 1 to 7 are complete. Phase 8 is prepared (ADR-0028): the clients and the pilot files are in place. The real pilot runs once the three API keys are set in the environment.
 
 1. **Foundations.**
    - `uv` project on Python 3.12, `git init` (ask first), ruff, pyright and pytest.

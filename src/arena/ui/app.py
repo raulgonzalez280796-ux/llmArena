@@ -18,6 +18,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field, ValidationError
 
+from arena.agents.providers import build_client, missing_keys
 from arena.agents.scripted import ScriptedChatClient
 from arena.agents.trace import ModelTrace
 from arena.config.loader import dump_experiment, parse_experiment
@@ -139,10 +140,18 @@ def create_app(root: Path) -> FastAPI:
     @app.post("/api/experiments/{name}/launch")
     def launch(name: str, body: LaunchBody) -> dict[str, str]:
         exp = load(name)
-        if not body.dry_run:
-            raise HTTPException(
-                status_code=400, detail="real model providers are not connected yet (phase 8)"
-            )
+        if body.dry_run:
+            factory = _dry_run_client
+        else:
+            if any(a.model.provider == "scripted" for a in exp.agents.values()):
+                raise HTTPException(status_code=400, detail="scripted agents only run as a dry run")
+            absent = missing_keys(list(exp.agents.values()))
+            if absent:
+                # Names only: the values are never read back or shown.
+                raise HTTPException(
+                    status_code=400, detail="environment variables not set: " + ", ".join(absent)
+                )
+            factory = build_client
         if not (fixtures_dir / exp.fixture).is_dir():
             raise HTTPException(
                 status_code=400, detail=f"fixture {exp.fixture!r} is not in fixtures/"
@@ -159,8 +168,8 @@ def create_app(root: Path) -> FastAPI:
                         seed=body.seed,
                         fixtures_root=fixtures_dir,
                         runs_root=runs_dir,
-                        client_factory=_dry_run_client,
-                        allow_scripted=True,
+                        client_factory=factory,
+                        allow_scripted=body.dry_run,
                     )
                 )
                 statuses[batch_id] = "done"

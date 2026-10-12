@@ -24,6 +24,7 @@
 | [0021](0021-shared-board.md) | The shared board (append-only, sender from the gateway, pull only) | §10-12, §20 |
 | [0022](0022-event-log-trace-and-fingerprint.md) | Event log, model trace and condition fingerprint | §19 |
 | [0023](0023-per-agent-tasks-and-round-limit.md) | Per-agent tasks and a round limit set by the researcher (amends 0007, 0009) | §5, §15 |
+| [0028](0028-real-providers-and-pilot.md) | Real providers (direct), pinned models, and the first pilot | AGT-5, LOG-2, LOG-4 |
 | [0027](0027-tool-picker-and-board-split.md) | Tool picker in the UI; board read and post as separate grants (amends 0004) | §13, §12 |
 | [0026](0026-local-ui.md) | The local UI: canonical editing, launch, results | §23 (see ADR-0002) |
 | [0025](0025-evaluation-and-outcome-rows.md) | Evaluation, outcome rows and the results table | §4, §20, §24 test 10 |

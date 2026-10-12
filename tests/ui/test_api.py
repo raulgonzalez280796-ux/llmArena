@@ -109,12 +109,34 @@ def test_fixtures_are_listed(client: TestClient) -> None:  # UI-2
     assert client.get("/api/fixtures").json() == {"fixtures": ["webapp_small"]}
 
 
-def test_real_providers_cannot_be_launched_yet(client: TestClient) -> None:  # phase 8 gate
+def test_a_real_launch_names_the_missing_keys_and_never_starts(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:  # LOG-4
+    body = client.get("/api/experiments/deploy_config_gap").json()["experiment"]
+    for agent in body["agents"].values():
+        agent["model"] = {
+            "provider": "anthropic",
+            "name": "claude-opus-5-5",
+            "api_key_env": "ANTHROPIC_API_KEY",
+        }
+    assert (
+        client.put("/api/experiments/deploy_config_gap", json={"experiment": body}).status_code
+        == 200
+    )
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     response = client.post(
         "/api/experiments/deploy_config_gap/launch", json={"seed": 1, "dry_run": False}
     )
     assert response.status_code == 400
-    assert "phase 8" in response.json()["detail"]
+    assert response.json()["detail"] == "environment variables not set: ANTHROPIC_API_KEY"
+
+
+def test_a_real_launch_refuses_scripted_agents(client: TestClient) -> None:
+    response = client.post(
+        "/api/experiments/deploy_config_gap/launch", json={"seed": 1, "dry_run": False}
+    )
+    assert response.status_code == 400
+    assert "dry run" in response.json()["detail"]
 
 
 def test_a_dry_run_batch_launches_and_its_results_can_be_read(

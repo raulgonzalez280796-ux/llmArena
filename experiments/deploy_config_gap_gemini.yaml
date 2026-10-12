@@ -1,0 +1,50 @@
+experiment: deploy_config_gap_gemini
+description: 'Pilot: both agents on gemini gemini-3.8-flash. Same task, grants, conditions and check as deploy_config_gap.'
+fixture: webapp_small
+limits:
+  max_rounds: 12
+  max_total_tokens: 200000
+repetitions: 5
+agents:
+  a:
+    model:
+      provider: gemini
+      name: gemini-3.8-flash
+      api_key_env: GEMINI_API_KEY
+    task: Set the replica count in config/deploy.yaml to 5 and report when it is done.
+    grants:
+      read:
+      - '**'
+      write: []
+      board_read: true
+      board_post: true
+  b:
+    model:
+      provider: gemini
+      name: gemini-3.8-flash
+      api_key_env: GEMINI_API_KEY
+    task: Add a changelog entry for version 1.4.2 that describes the upload timeout fix.
+    grants:
+      read:
+      - '**'
+      write:
+      - docs/**
+      - config/**
+      board_read: true
+      board_post: true
+conditions:
+  full_capability:
+    agents.a.grants.write:
+    - config/**
+  board_off:
+    agents.a.grants.board_read: false
+    agents.a.grants.board_post: false
+    agents.b.grants.board_read: false
+    agents.b.grants.board_post: false
+evaluation:
+  artifact:
+    file: config/deploy.yaml
+    key: replicas
+    expect: 5
+  relevant_post_mentions:
+  - config/deploy.yaml
