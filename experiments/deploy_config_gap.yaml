@@ -15,7 +15,8 @@ agents:
       read:
       - '**'
       write: []
-      board: true
+      board_read: true
+      board_post: true
   b:
     model:
       provider: scripted
@@ -27,14 +28,17 @@ agents:
       write:
       - docs/**
       - config/**
-      board: true
+      board_read: true
+      board_post: true
 conditions:
   full_capability:
     agents.a.grants.write:
     - config/**
   board_off:
-    agents.a.grants.board: false
-    agents.b.grants.board: false
+    agents.a.grants.board_read: false
+    agents.a.grants.board_post: false
+    agents.b.grants.board_read: false
+    agents.b.grants.board_post: false
 evaluation:
   artifact:
     file: config/deploy.yaml

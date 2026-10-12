@@ -58,9 +58,10 @@ class ModelSpec(_Strict):
 class Grants(_Strict):
     """What an agent may do. Everything not listed is denied (ADR-0019)."""
 
-    read: tuple[str, ...] = ()
-    write: tuple[str, ...] = ()
-    board: bool = False
+    read: tuple[str, ...] = ()  # offers list_files and read_file
+    write: tuple[str, ...] = ()  # offers write_file
+    board_read: bool = False  # offers read_board
+    board_post: bool = False  # offers post_to_board
 
     @field_validator("read", "write")
     @classmethod

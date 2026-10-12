@@ -14,7 +14,7 @@ Filled in as tests are written. Every requirement in `SRS.md` must map to at lea
 | AGT-3 | 2, 5 | `tests/agents/test_maf_contract.py::test_two_agents_do_not_share_history` (framework level; trial level in phase 5) | partial |
 | AGT-2, AGT-5 | 5 | — | planned |
 | ADR-0017 findings 1-4 | 2 | `tests/agents/test_maf_contract.py` (6 tests) | done |
-| PRM-1 | 3 | `tests/tools/test_gateway.py::test_ungranted_tool_name_is_refused_and_logged`, `::test_known_tool_without_its_grant_is_refused_and_logged`; `tests/tools/test_framework_tools.py::test_model_is_offered_only_the_granted_tools` | done |
+| PRM-1 | 3, 7 | `tests/tools/test_offered_tools.py` (each grant offers exactly its tools; the preview uses the same function); `tests/tools/test_gateway.py::test_ungranted_tool_name_is_refused_and_logged`, `::test_known_tool_without_its_grant_is_refused_and_logged`; `tests/tools/test_framework_tools.py::test_model_is_offered_only_the_granted_tools` | done |
 | PRM-2 | 3 | `tests/tools/test_gateway.py::test_model_supplied_identity_is_rejected_and_not_applied`, `::test_extra_argument_on_write_is_rejected` | done |
 | PRM-3 | 3 | `tests/workspace/test_paths.py::test_grant_matching`, `tests/tools/test_gateway.py` (read, write, list) | done |
 | PRM-4 | 3 | `tests/workspace/test_paths.py` (traversal, absolute, symlinks, NFD, malformed), `tests/tools/test_gateway.py::test_symlink_*` | done |
@@ -29,7 +29,7 @@ Filled in as tests are written. Every requirement in `SRS.md` must map to at lea
 | BRD-3 | 4 | `tests/board/test_board.py::test_posts_are_numbered_from_one_with_the_sender_recorded`; `tests/tools/test_board_tools.py::test_post_is_stamped_with_the_gateway_identity`, `::test_post_names_a_sender_argument_is_rejected` | done |
 | BRD-4 | 4 | `tests/tools/test_pull_only.py::test_peer_does_not_see_a_post_until_it_reads_the_board` | done |
 | BRD-5 | 4 | `tests/board/test_board.py` (per-agent count, length, empty), `tests/tools/test_board_tools.py::test_post_over_the_limit_is_rejected_and_logged` | done |
-| BRD-6 | 4 | `tests/tools/test_board_tools.py::test_board_tools_without_grant_are_refused_and_logged`, `::test_board_grant_without_a_board_is_a_construction_error` | done |
+| BRD-6 | 4, 7 | `tests/tools/test_board_tools.py::test_board_tools_without_grant_are_refused_and_logged`, `::test_board_grant_without_a_board_is_a_construction_error`; `tests/tools/test_offered_tools.py` (read-only and post-only agents) | done |
 | LOG-1 | 4, 5 | `tests/events/test_jsonl.py` (run context, gap-free seq, round, no overwrite, unicode) | done |
 | LOG-2 | 3, 4 | `tests/tools/test_gateway.py::test_every_call_is_logged_once_with_its_arguments`; `tests/agents/test_model_trace.py` (requests, replies, unoffered calls) | done for tool calls and model rounds; run-level events in phase 5 |
 | LOG-3 | 4 | `tests/events/test_views.py` | done |

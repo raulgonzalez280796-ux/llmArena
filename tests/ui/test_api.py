@@ -147,3 +147,20 @@ def test_a_dry_run_batch_launches_and_its_results_can_be_read(
 def test_unknown_batches_and_runs_are_not_found(client: TestClient) -> None:  # UI-4
     assert client.get("/api/batches/no_such_batch").status_code == 404
     assert client.get("/api/batches/no_such_batch/runs/r000/agents/a").status_code == 404
+
+
+def test_the_tool_preview_matches_what_the_gateway_offers(
+    client: TestClient,
+) -> None:  # PRM-1, UI-2
+    grants = {"read": ["config/**"], "write": [], "board_read": True, "board_post": False}
+    response = client.post("/api/tools", json={"grants": grants})
+    assert response.status_code == 200
+    assert response.json() == {
+        "offered": ["list_files", "read_file", "read_board"],
+        "always": ["finish"],
+    }
+
+
+def test_the_tool_preview_refuses_an_unknown_grant_key(client: TestClient) -> None:  # EXP-1
+    response = client.post("/api/tools", json={"grants": {"delete": ["x"]}})
+    assert response.status_code == 422

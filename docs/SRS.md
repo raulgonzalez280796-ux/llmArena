@@ -80,7 +80,7 @@ Each requirement has acceptance criteria (AC). Test IDs are listed in `docs/TRAC
 - **BRD-3** The runtime stamps the sender of every post. *AC:* a post's `sender` always equals the calling agent's bound id.
 - **BRD-4** Posts are pull-only. Agents get no notification, and posts never enter an agent's context unless it calls `read_board`. *AC:* B's model input is unchanged by A's post until B calls `read_board`.
 - **BRD-5** Each agent has limits on post count and post length. Hitting a limit returns an error and is logged. *AC:* limit test.
-- **BRD-6** Board access is a grant (`board: true`), so a condition can remove it. *AC:* with `board: false` the tools are absent from the agent's tool list.
+- **BRD-6** Board reading and posting are two grants (`board_read`, `board_post`), so a condition can remove either one. *AC:* with a grant false, its tool is absent from the agent's tool list (ADR-0027).
 
 ### 4.5 Runner (RUN), ADR-0009
 

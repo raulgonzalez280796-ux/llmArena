@@ -185,14 +185,40 @@ function renderEditor() {
   $("launch-msg").replaceChildren();
 }
 
+const TOOL_ROWS = [
+  { key: "read", label: "Read files", tools: "list_files, read_file", paths: true },
+  { key: "write", label: "Write files", tools: "write_file", paths: true },
+  { key: "boardRead", label: "Read the shared board", tools: "read_board" },
+  { key: "boardPost", label: "Post to the shared board", tools: "post_to_board" },
+];
+
 function agentCard(id, a) {
   const provider = select(["scripted", "openai", "anthropic", "gemini"], a.model.provider);
   const model = input(a.model.name, { "data-k": "model.name" });
   const keyEnv = input(a.model.api_key_env ?? "", { placeholder: "e.g. OPENAI_API_KEY (name only, never the key)" });
   const task = area(a.task, 2);
-  const read = area(a.grants.read.join("\n"), 2);
-  const write = area(a.grants.write.join("\n"), 2);
-  const board = el("input", { type: "checkbox", checked: a.grants.board });
+  const checks = {
+    read: el("input", { type: "checkbox", checked: a.grants.read.length > 0 }),
+    write: el("input", { type: "checkbox", checked: a.grants.write.length > 0 }),
+    boardRead: el("input", { type: "checkbox", checked: a.grants.board_read }),
+    boardPost: el("input", { type: "checkbox", checked: a.grants.board_post }),
+  };
+  const paths = {
+    read: area(a.grants.read.join("\n"), 2),
+    write: area(a.grants.write.join("\n"), 2),
+  };
+  const preview = el("div", { class: "muted", "data-preview": "" });
+  const toolRows = TOOL_ROWS.map((row) => {
+    const box = el("div", { class: "card" },
+      el("div", { class: "check" }, checks[row.key],
+        el("span", {}, el("strong", { text: row.label + " " }), el("code", { text: row.tools }))),
+      row.paths ? el("div", { style: "margin-top:6px" }, field("Paths (one glob per line)", paths[row.key])) : null);
+    const syncPaths = () => { if (row.paths) paths[row.key].disabled = !checks[row.key].checked; };
+    checks[row.key].addEventListener("change", () => { syncPaths(); refreshPreview(card); });
+    if (row.paths) paths[row.key].addEventListener("input", () => refreshPreview(card));
+    syncPaths();
+    return box;
+  });
   const card = el("div", { class: "card", "data-agent": id },
     el("div", { class: "row" }, el("strong", { text: "Agent " + id }),
       el("button", { class: "danger", text: "Remove", onclick: () => card.remove() })),
@@ -201,12 +227,40 @@ function agentCard(id, a) {
       el("div", { style: "flex:2" }, field("Model (pinned id)", model)),
       el("div", { style: "flex:2" }, field("API key variable", keyEnv))),
     field("Task", task),
-    el("div", { class: "row" },
-      el("div", { style: "flex:1" }, field("Read grants (one glob per line)", read)),
-      el("div", { style: "flex:1" }, field("Write grants (one glob per line)", write))),
-    el("div", { class: "check" }, board, el("span", { text: "Shared board access" })));
-  card._fields = { provider, model, keyEnv, task, read, write, board };
+    el("h3", { text: "Tools this agent is offered" }),
+    ...toolRows,
+    el("div", { class: "muted", text: "finish (always offered: the agent uses it to end its own work)" }),
+    el("div", { class: "msg", style: "background:var(--bg)" }, el("strong", { text: "Preview: " }), preview));
+  card._fields = { provider, model, keyEnv, task, checks, paths };
+  refreshPreview(card);
   return card;
+}
+
+// Ask the server which tools these grants offer, so the preview uses the same rule as the runtime.
+async function refreshPreview(card) {
+  const grants = collectGrants(card);
+  const box = card.querySelector("[data-preview]");
+  try {
+    const { offered } = await api("/api/tools", {
+      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ grants }),
+    });
+    box.textContent = offered.length ? offered.join(", ") : "nothing (the agent can only finish)";
+  } catch (err) {
+    box.textContent = String(err.message || err);
+  }
+}
+
+// Turns the tool checkboxes into the grants the file stores. A tool that is ticked needs a path
+// where it has one; an unticked tool gets no paths at all.
+function collectGrants(card) {
+  const f = card._fields;
+  const pathsFor = (key) => (f.checks[key].checked ? lines(f.paths[key].value) : []);
+  return {
+    read: pathsFor("read"),
+    write: pathsFor("write"),
+    board_read: f.checks.boardRead.checked,
+    board_post: f.checks.boardPost.checked,
+  };
 }
 
 function conditionCard(cname, overrides) {
@@ -231,7 +285,7 @@ function addAgentClick() {
   const id = $("f-newagent").value.trim();
   if (!id) return;
   const box = $("f-agents");
-  box.append(agentCard(id, { model: { provider: "scripted", name: "dry-run", api_key_env: null }, task: "", grants: { read: [], write: [], board: false } }));
+  box.append(agentCard(id, { model: { provider: "scripted", name: "dry-run", api_key_env: null }, task: "", grants: { read: [], write: [], board_read: false, board_post: false } }));
   $("f-newagent").value = "";
 }
 
@@ -248,10 +302,16 @@ function collect() {
     const f = card._fields;
     const provider = f.provider.value;
     const keyEnv = f.keyEnv.value.trim();
+    const grants = collectGrants(card);
+    for (const [tool, key] of [["read", "read"], ["write", "write"]]) {
+      if (f.checks[key].checked && grants[tool].length === 0) {
+        throw new Error(`Agent ${card.dataset.agent}: "${key === "read" ? "Read files" : "Write files"}" is ticked but has no path.`);
+      }
+    }
     exp.agents[card.dataset.agent] = {
       model: { provider, name: f.model.value.trim(), ...(provider === "scripted" ? {} : { api_key_env: keyEnv || null }) },
       task: f.task.value,
-      grants: { read: lines(f.read.value), write: lines(f.write.value), board: f.board.checked },
+      grants,
     };
     if (provider === "scripted") delete exp.agents[card.dataset.agent].model.api_key_env;
   }

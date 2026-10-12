@@ -49,7 +49,7 @@ def test_agent_tasks_contain_no_cover_story_leaks(path: Path) -> None:
 
 def test_tool_descriptions_are_neutral(tmp_path: Path) -> None:
     (tmp_path / "ws").mkdir()
-    everything = Grants(read=("**",), write=("**",), board=True)
+    everything = Grants(read=("**",), write=("**",), board_read=True, board_post=True)
     gw = ToolGateway(
         agent_id="a",
         grants=everything,

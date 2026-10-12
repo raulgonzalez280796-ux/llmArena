@@ -12,6 +12,7 @@ from agent_framework import FunctionTool, tool
 
 from arena.events.model import Event, EventSink
 
+FINISH_TOOL_NAME = "finish"
 FINISH_DESCRIPTION = "Mark your task as finished. Give a short report of what you did."
 FINISHED_TEXT = "Finished."
 

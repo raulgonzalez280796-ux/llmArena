@@ -228,7 +228,7 @@ def _build_runtime(
         grants=agent_spec.grants,
         workspace=workspace,
         sink=sink,
-        board=board if agent_spec.grants.board else None,
+        board=board if (agent_spec.grants.board_read or agent_spec.grants.board_post) else None,
     )
     trace = ModelTrace(sink, agent_id=agent_id)
     client = client_factory(agent_id, agent_spec, trace)

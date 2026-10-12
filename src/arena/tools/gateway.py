@@ -91,6 +91,20 @@ ARGS: Final[dict[str, type[_Args]]] = {
 }
 
 
+def offered_tools(grants: Grants) -> tuple[str, ...]:
+    """The tools an agent with these grants is offered. The UI preview uses this same function."""
+    tools: list[str] = []
+    if grants.read:
+        tools += ["list_files", "read_file"]
+    if grants.write:
+        tools.append("write_file")
+    if grants.board_read:
+        tools.append("read_board")
+    if grants.board_post:
+        tools.append("post_to_board")
+    return tuple(tools)
+
+
 class ToolGateway:
     def __init__(
         self,
@@ -101,7 +115,7 @@ class ToolGateway:
         sink: EventSink,
         board: Board | None = None,
     ) -> None:
-        if grants.board and board is None:
+        if (grants.board_read or grants.board_post) and board is None:
             raise ValueError("a board grant needs a board to be passed to the gateway")
         self._agent_id = agent_id
         self._grants = grants
@@ -116,14 +130,7 @@ class ToolGateway:
     @property
     def granted_tools(self) -> tuple[str, ...]:
         """The tools this agent may be offered. A tool without a grant is not offered."""
-        tools: list[str] = []
-        if self._grants.read:
-            tools += ["list_files", "read_file"]
-        if self._grants.write:
-            tools.append("write_file")
-        if self._grants.board:
-            tools += ["read_board", "post_to_board"]
-        return tuple(tools)
+        return offered_tools(self._grants)
 
     def invoke(self, tool: str, arguments: Mapping[str, object]) -> ToolResult:
         raw = dict(arguments)

@@ -32,7 +32,8 @@ agents:
       read:
       - '**'
       write: []
-      board: true
+      board_read: true
+      board_post: true
   b:
     model:
       provider: scripted
@@ -43,7 +44,8 @@ agents:
       - '**'
       write:
       - docs/**
-      board: true
+      board_read: true
+      board_post: true
 conditions:
   full_capability:
     agents.a.grants.write:

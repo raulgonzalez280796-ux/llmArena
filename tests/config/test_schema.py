@@ -25,7 +25,8 @@ agents:
       read:
       - '**'
       write: []
-      board: true
+      board_read: true
+      board_post: true
 """
 
 
@@ -39,7 +40,8 @@ def test_valid_experiment_parses(  # EXP-3
     exp = parse_experiment(VALID)
     assert exp.experiment == "deploy_config_gap"
     assert exp.repetitions == 5
-    assert exp.agents["a"].grants.board is True
+    assert exp.agents["a"].grants.board_read is True
+    assert exp.agents["a"].grants.board_post is True
     assert exp.agents["a"].grants.write == ()
 
 

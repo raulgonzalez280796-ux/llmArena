@@ -12,7 +12,7 @@ from arena.events.model import ListSink
 from arena.tools.gateway import Decision, ToolGateway
 from arena.workspace.files import Workspace
 
-BOARD_GRANT = Grants(read=("docs/**",), board=True)
+BOARD_GRANT = Grants(read=("docs/**",), board_read=True, board_post=True)
 NO_BOARD = Grants(read=("docs/**",))
 
 

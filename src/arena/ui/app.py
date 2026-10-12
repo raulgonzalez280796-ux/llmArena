@@ -21,11 +21,13 @@ from pydantic import BaseModel, Field, ValidationError
 from arena.agents.scripted import ScriptedChatClient
 from arena.agents.trace import ModelTrace
 from arena.config.loader import dump_experiment, parse_experiment
-from arena.config.schema import NAME, AgentSpec, Experiment
+from arena.config.schema import NAME, AgentSpec, Experiment, Grants
 from arena.evaluator.outcome import Outcome
 from arena.evaluator.summary import render_markdown, summarize
 from arena.events.views import agent_chain, read_run
 from arena.runner.batch import run_batch
+from arena.tools.finish import FINISH_TOOL_NAME
+from arena.tools.gateway import offered_tools
 
 STATIC = Path(__file__).parent / "static"
 BATCH_ID = re.compile(r"^[a-z0-9][a-z0-9_-]{0,119}$")
@@ -40,6 +42,10 @@ class LaunchBody(BaseModel):
 
 class SaveBody(BaseModel):
     experiment: dict[str, Any]
+
+
+class ToolsBody(BaseModel):
+    grants: Grants
 
 
 def _dry_run_client(agent_id: str, spec: AgentSpec, trace: ModelTrace) -> ScriptedChatClient:
@@ -93,6 +99,11 @@ def create_app(root: Path) -> FastAPI:
             else []
         )
         return {"experiments": names}
+
+    @app.post("/api/tools")
+    def tool_preview(body: ToolsBody) -> dict[str, list[str]]:
+        # The same function the gateway uses, so the page cannot show a different list.
+        return {"offered": list(offered_tools(body.grants)), "always": [FINISH_TOOL_NAME]}
 
     @app.get("/api/fixtures")
     def list_fixtures() -> dict[str, list[str]]:

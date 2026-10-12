@@ -16,7 +16,7 @@ from arena.tools.gateway import ToolGateway
 from arena.workspace.files import Workspace
 from tests.helpers import run_step
 
-GRANTS = Grants(read=("docs/**",), board=True)
+GRANTS = Grants(read=("docs/**",), board_read=True, board_post=True)
 
 
 def request_text(client: ScriptedChatClient, index: int) -> str:
