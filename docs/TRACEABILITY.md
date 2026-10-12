@@ -44,7 +44,10 @@ Filled in as tests are written. Every requirement in `SRS.md` must map to at lea
 | EVL-1 | 6 | `tests/evaluator/test_artifact.py` (exact value, type, missing file, nested key, outside workspace) | done |
 | EVL-2 | 6 | `tests/evaluator/test_outcome.py` (full success, unoffered attempt, helper never reads, board off, vague request) | done |
 | EVL-3 | 6 | `tests/evaluator/test_summary.py` | done |
-| UI-1 … UI-4 | 7 | — | planned |
+| UI-1 | 7 | `tests/ui/test_api.py::test_the_page_is_served`; checked in the browser pane | done |
+| UI-2 | 7 | `tests/ui/test_api.py` (round trip byte-for-byte, edit saved canonical, invalid edit refused, name must match, unsafe names refused, fixtures listed) | done |
+| UI-3 | 7 | `tests/ui/test_api.py::test_a_dry_run_batch_launches_and_its_results_can_be_read`; browser check: batch ran to done | done (dry run only; real models phase 8) |
+| UI-4 | 7 | `tests/ui/test_api.py` (outcome rows, per-agent chain, unknown batch and run) and the agent logs view in the browser | done |
 | NFR-1 … NFR-5 | all | — | planned |
 
 ## Blueprint §24 infrastructure tests

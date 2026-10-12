@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LLM Arena</title>
+<style>
+  :root { --bg: #f7f7f5; --panel: #ffffff; --ink: #1f2328; --muted: #6b7280; --line: #d9dbe0; --accent: #2b5cad; --bad: #b42318; --ok: #1a7f37; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #16181c; --panel: #1f2227; --ink: #e6e8eb; --muted: #9aa3ad; --line: #353a42; --accent: #7aa7ff; --bad: #ff8a80; --ok: #6fd28f; }
+  }
+  :root:not([data-theme="light"]) { color-scheme: light dark; }
+  :root[data-theme="dark"] { --bg: #16181c; --panel: #1f2227; --ink: #e6e8eb; --muted: #9aa3ad; --line: #353a42; --accent: #7aa7ff; --bad: #ff8a80; --ok: #6fd28f; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.5 system-ui, sans-serif; }
+  header { padding: 12px 16px; border-bottom: 1px solid var(--line); background: var(--panel); font-weight: 600; }
+  main { display: grid; grid-template-columns: 240px 1fr; gap: 16px; padding: 16px; }
+  @media (max-width: 760px) { main { grid-template-columns: 1fr; } }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px; }
+  h2 { font-size: 15px; margin: 0 0 10px; }
+  h3 { font-size: 13px; margin: 14px 0 6px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  label { display: block; margin: 8px 0 2px; color: var(--muted); font-size: 12px; }
+  input, select, textarea { width: 100%; box-sizing: border-box; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); font: inherit; }
+  textarea { min-height: 60px; font-family: ui-monospace, monospace; font-size: 12px; }
+  button { padding: 6px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); color: var(--ink); cursor: pointer; font: inherit; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.danger { color: var(--bad); }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .card { border: 1px solid var(--line); border-radius: 8px; padding: 10px; margin: 8px 0; }
+  .list button { display: block; width: 100%; text-align: left; margin: 2px 0; border: none; background: none; padding: 6px; }
+  .list button.active { background: var(--bg); font-weight: 600; }
+  .msg { margin: 8px 0; padding: 8px; border-radius: 6px; white-space: pre-wrap; }
+  .msg.ok { color: var(--ok); } .msg.err { color: var(--bad); }
+  table { border-collapse: collapse; width: 100%; font-size: 12px; }
+  th, td { border-bottom: 1px solid var(--line); padding: 4px 6px; text-align: left; vertical-align: top; }
+  pre { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 8px; overflow: auto; font-size: 12px; max-height: 320px; }
+  .muted { color: var(--muted); }
+  .check { display: flex; gap: 6px; align-items: center; margin-top: 8px; }
+  .check input { width: auto; }
+</style>
+</head>
+<body>
+<header>LLM Arena</header>
+<main>
+  <section>
+    <h2>Experiments</h2>
+    <div class="list" id="experiments"></div>
+    <div class="row" style="margin-top:8px"><button id="new">New experiment</button></div>
+    <h2 style="margin-top:18px">Batches</h2>
+    <div class="list" id="batches"></div>
+  </section>
+
+  <div>
+    <section id="editor-section">
+      <h2 id="editor-title">Choose an experiment</h2>
+      <div id="editor"></div>
+      <div id="save-msg"></div>
+      <div class="row" style="margin-top:10px">
+        <button class="primary" id="save">Save</button>
+        <label class="check"><input type="checkbox" id="dry" checked> dry run (no model)</label>
+        <input id="seed" type="number" value="1" style="width:90px">
+        <button id="launch">Launch batch</button>
+      </div>
+      <div id="launch-msg"></div>
+    </section>
+
+    <section id="results-section" style="margin-top:16px">
+      <h2>Results</h2>
+      <div id="results" class="muted">Launch a batch or pick one on the left.</div>
+    </section>
+  </div>
+</main>
+
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+const state = { name: null, exp: null, isNew: false, batch: null };
+
+function el(tag, props = {}, ...children) {
+  const node = document.createElement(tag);
+  for (const [key, value] of Object.entries(props)) {
+    if (key === "text") node.textContent = value;
+    else if (key === "onclick") node.addEventListener("click", value);
+    else if (key === "value") node.value = value;
+    else if (key === "checked") node.checked = value;
+    else if (key === "class") node.className = value;
+    else node.setAttribute(key, value);
+  }
+  for (const child of children) if (child) node.append(child);
+  return node;
+}
+function field(labelText, input) { return el("div", {}, el("label", { text: labelText }), input); }
+function input(value, opts = {}) { return el("input", { value: value ?? "", ...opts }); }
+function area(value, rows = 3) { const t = el("textarea", { rows: String(rows) }); t.value = value ?? ""; return t; }
+function select(options, value) {
+  const s = el("select");
+  for (const o of options) s.append(el("option", { value: o, text: o }));
+  s.value = value; return s;
+}
+function lines(text) { return text.split("\n").map((s) => s.trim()).filter(Boolean); }
+async function api(path, options) {
+  const response = await fetch(path, options);
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(typeof body.detail === "string" ? body.detail : JSON.stringify(body.detail));
+  return body;
+}
+function message(where, text, ok) { where.replaceChildren(el("div", { class: "msg " + (ok ? "ok" : "err"), text })); }
+
+async function refreshLists() {
+  const { experiments } = await api("/api/experiments");
+  $("experiments").replaceChildren(...experiments.map((n) =>
+    el("button", { class: n === state.name ? "active" : "", text: n, onclick: () => openExperiment(n) })));
+  const { batches } = await api("/api/batches");
+  $("batches").replaceChildren(...batches.slice(0, 20).map((b) =>
+    el("button", { class: b.batch_id === state.batch ? "active" : "", text: b.batch_id + " · " + b.status, onclick: () => showBatch(b.batch_id) })));
+}
+
+async function openExperiment(name) {
+  const data = await api("/api/experiments/" + encodeURIComponent(name));
+  state.name = name; state.exp = data.experiment; state.isNew = false;
+  renderEditor();
+  refreshLists();
+}
+
+function newExperiment() {
+  state.name = null; state.isNew = true;
+  state.exp = {
+    experiment: "", description: "", fixture: "webapp_small",
+    limits: { max_rounds: 10, max_total_tokens: 200000 }, repetitions: 1,
+    agents: {}, conditions: {}, evaluation: null,
+  };
+  renderEditor();
+}
+
+function renderEditor() {
+  const exp = state.exp;
+  $("editor-title").textContent = state.isNew ? "New experiment" : exp.experiment;
+  $("save-msg").replaceChildren();
+  const nameInput = input(exp.experiment, { readonly: state.isNew ? null : "readonly" });
+  nameInput.id = "f-name";
+  const desc = area(exp.description ?? "", 2); desc.id = "f-desc";
+  const fixture = el("select", { id: "f-fixture" });
+  api("/api/fixtures").then(({ fixtures }) => {
+    fixture.replaceChildren(...fixtures.map((f) => el("option", { value: f, text: f })));
+    fixture.value = exp.fixture;
+  });
+  const rounds = input(exp.limits.max_rounds, { type: "number", id: "f-rounds" });
+  const tokens = input(exp.limits.max_total_tokens, { type: "number", id: "f-tokens" });
+  const reps = input(exp.repetitions, { type: "number", id: "f-reps" });
+
+  const agentsBox = el("div", { id: "f-agents" });
+  for (const [id, a] of Object.entries(exp.agents)) agentsBox.append(agentCard(id, a));
+  const addAgent = input("", { placeholder: "new agent id, e.g. c" });
+  addAgent.id = "f-newagent";
+
+  const conditionsBox = el("div", { id: "f-conditions" });
+  for (const [cname, overrides] of Object.entries(exp.conditions)) conditionsBox.append(conditionCard(cname, overrides));
+
+  const ev = exp.evaluation;
+  const evOn = el("input", { type: "checkbox", id: "f-ev-on", checked: !!ev });
+  const evFile = input(ev?.artifact.file ?? "config/deploy.yaml", { id: "f-ev-file" });
+  const evKey = input(ev?.artifact.key ?? "replicas", { id: "f-ev-key" });
+  const evExpect = input(JSON.stringify(ev?.artifact.expect ?? 5), { id: "f-ev-expect" });
+  const evMentions = area((ev?.relevant_post_mentions ?? []).join("\n"), 2); evMentions.id = "f-ev-mentions";
+
+  $("editor").replaceChildren(
+    el("div", { class: "row" }, el("div", { style: "flex:1" }, field("Experiment name (lowercase, underscores)", nameInput)),
+      el("div", { style: "flex:2" }, field("Description", desc))),
+    el("div", { class: "row" },
+      el("div", { style: "flex:1" }, field("Fixture (project copied for each run)", fixture)),
+      el("div", { style: "flex:1" }, field("Max rounds", rounds)),
+      el("div", { style: "flex:1" }, field("Max total tokens", tokens)),
+      el("div", { style: "flex:1" }, field("Repetitions", reps))),
+    el("h3", { text: "Agents: one task each" }), agentsBox,
+    el("div", { class: "row" }, addAgent, el("button", { text: "Add agent", onclick: addAgentClick })),
+    el("h3", { text: "Conditions (each changes fields by path, e.g. agents.a.grants.write)" }), conditionsBox,
+    el("div", { class: "row" }, el("button", { text: "Add condition", onclick: () => { conditionsBox.append(conditionCard("", [])); } })),
+    el("h3", { text: "Evaluation" }),
+    el("div", { class: "check" }, evOn, el("span", { text: "Check an artifact after each run" })),
+    el("div", { class: "row" },
+      el("div", { style: "flex:2" }, field("File that must hold the value", evFile)),
+      el("div", { style: "flex:1" }, field("Dotted key", evKey)),
+      el("div", { style: "flex:1" }, field("Expected value (JSON)", evExpect))),
+    field("Board post mentions that count as a request (one per line)", evMentions),
+  );
+  $("launch-msg").replaceChildren();
+}
+
+function agentCard(id, a) {
+  const provider = select(["scripted", "openai", "anthropic", "gemini"], a.model.provider);
+  const model = input(a.model.name, { "data-k": "model.name" });
+  const keyEnv = input(a.model.api_key_env ?? "", { placeholder: "e.g. OPENAI_API_KEY (name only, never the key)" });
+  const task = area(a.task, 2);
+  const read = area(a.grants.read.join("\n"), 2);
+  const write = area(a.grants.write.join("\n"), 2);
+  const board = el("input", { type: "checkbox", checked: a.grants.board });
+  const card = el("div", { class: "card", "data-agent": id },
+    el("div", { class: "row" }, el("strong", { text: "Agent " + id }),
+      el("button", { class: "danger", text: "Remove", onclick: () => card.remove() })),
+    el("div", { class: "row" },
+      el("div", { style: "flex:1" }, field("Provider", provider)),
+      el("div", { style: "flex:2" }, field("Model (pinned id)", model)),
+      el("div", { style: "flex:2" }, field("API key variable", keyEnv))),
+    field("Task", task),
+    el("div", { class: "row" },
+      el("div", { style: "flex:1" }, field("Read grants (one glob per line)", read)),
+      el("div", { style: "flex:1" }, field("Write grants (one glob per line)", write))),
+    el("div", { class: "check" }, board, el("span", { text: "Shared board access" })));
+  card._fields = { provider, model, keyEnv, task, read, write, board };
+  return card;
+}
+
+function conditionCard(cname, overrides) {
+  const nameBox = input(cname, { placeholder: "condition name" });
+  const rows = el("div", { class: "rows" });
+  const addRow = (path = "", value = "") => {
+    const p = input(path, { placeholder: "agents.a.grants.write" });
+    const v = input(value, { placeholder: "JSON value, e.g. [\"config/**\"]" });
+    rows.append(el("div", { class: "row" }, el("div", { style: "flex:2" }, p), el("div", { style: "flex:2" }, v),
+      el("button", { class: "danger", text: "×", onclick: (e) => e.target.parentElement.remove() })));
+  };
+  const entries = Object.entries(overrides);
+  if (entries.length === 0) addRow(); else for (const [p, v] of entries) addRow(p, JSON.stringify(v));
+  const card = el("div", { class: "card" },
+    el("div", { class: "row" }, nameBox, el("button", { text: "Add override", onclick: () => addRow() }),
+      el("button", { class: "danger", text: "Remove condition", onclick: () => card.remove() })), rows);
+  card._name = nameBox; card._rows = rows;
+  return card;
+}
+
+function addAgentClick() {
+  const id = $("f-newagent").value.trim();
+  if (!id) return;
+  const box = $("f-agents");
+  box.append(agentCard(id, { model: { provider: "scripted", name: "dry-run", api_key_env: null }, task: "", grants: { read: [], write: [], board: false } }));
+  $("f-newagent").value = "";
+}
+
+function collect() {
+  const exp = {
+    experiment: state.isNew ? $("f-name").value.trim() : state.name,
+    description: $("f-desc").value.trim() || null,
+    fixture: $("f-fixture").value,
+    limits: { max_rounds: Number($("f-rounds").value), max_total_tokens: Number($("f-tokens").value) },
+    repetitions: Number($("f-reps").value),
+    agents: {}, conditions: {}, evaluation: null,
+  };
+  for (const card of $("f-agents").querySelectorAll("[data-agent]")) {
+    const f = card._fields;
+    const provider = f.provider.value;
+    const keyEnv = f.keyEnv.value.trim();
+    exp.agents[card.dataset.agent] = {
+      model: { provider, name: f.model.value.trim(), ...(provider === "scripted" ? {} : { api_key_env: keyEnv || null }) },
+      task: f.task.value,
+      grants: { read: lines(f.read.value), write: lines(f.write.value), board: f.board.checked },
+    };
+    if (provider === "scripted") delete exp.agents[card.dataset.agent].model.api_key_env;
+  }
+  for (const card of $("f-conditions").querySelectorAll(".card")) {
+    const cname = card._name.value.trim();
+    if (!cname) continue;
+    const overrides = {};
+    for (const row of card._rows.querySelectorAll(".row")) {
+      const [p, v] = row.querySelectorAll("input");
+      if (p.value.trim()) overrides[p.value.trim()] = JSON.parse(v.value || "null");
+    }
+    exp.conditions[cname] = overrides;
+  }
+  if ($("f-ev-on").checked) {
+    let expect;
+    try { expect = JSON.parse($("f-ev-expect").value); } catch { expect = $("f-ev-expect").value; }
+    exp.evaluation = {
+      artifact: { file: $("f-ev-file").value.trim(), key: $("f-ev-key").value.trim(), expect },
+      relevant_post_mentions: lines($("f-ev-mentions").value),
+    };
+  }
+  return exp;
+}
+
+$("save").addEventListener("click", async () => {
+  try {
+    const exp = collect();
+    const name = exp.experiment;
+    const data = await api("/api/experiments/" + encodeURIComponent(name), {
+      method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ experiment: exp }),
+    });
+    state.name = name; state.isNew = false; state.exp = exp;
+    message($("save-msg"), "Saved. The file on disk is the canonical form:\n\n" + data.yaml, true);
+    refreshLists();
+  } catch (err) { message($("save-msg"), String(err.message || err), false); }
+});
+
+$("launch").addEventListener("click", async () => {
+  if (!state.name) { message($("launch-msg"), "Save the experiment first.", false); return; }
+  try {
+    const { batch_id } = await api("/api/experiments/" + encodeURIComponent(state.name) + "/launch", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ seed: Number($("seed").value), dry_run: $("dry").checked }),
+    });
+    message($("launch-msg"), "Launched " + batch_id + ". Results appear below as runs finish.", true);
+    pollBatch(batch_id);
+  } catch (err) { message($("launch-msg"), String(err.message || err), false); }
+});
+
+$("new").addEventListener("click", newExperiment);
+
+// Keep the results panel current until the batch leaves the "running" state.
+async function pollBatch(batchId) {
+  for (let i = 0; i < 600; i++) {
+    try {
+      const status = await showBatch(batchId);
+      if (status !== "running") return;
+    } catch (err) {
+      // The batch folder appears a moment after launch; keep waiting.
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  }
+}
+
+async function showBatch(batchId) {
+  state.batch = batchId;
+  const data = await api("/api/batches/" + encodeURIComponent(batchId));
+  const pre = el("pre", { text: data.table || "No outcome rows yet." });
+  const rows = data.outcomes.map((o) => el("tr", {},
+    el("td", { text: o.run_id }), el("td", { text: o.condition }), el("td", { text: String(o.repetition) }),
+    el("td", { text: o.stop_reason }), el("td", { text: String(o.requester_posted_relevant) }),
+    el("td", { text: String(o.helper_read_after_post) }), el("td", { text: String(o.helper_performed_write) }),
+    el("td", { text: String(o.artifact_verified) }),
+    el("td", {}, el("button", { text: "agent logs", onclick: () => showRunLogs(batchId, o) }))));
+  const table = el("table", {},
+    el("tr", {}, ...["run", "condition", "rep", "stop", "posted", "read", "wrote", "verified", ""].map((h) => el("th", { text: h }))),
+    ...rows);
+  $("results").replaceChildren(el("p", { text: "Batch " + batchId + " · " + data.status }), pre, table, el("div", { id: "logs" }));
+  refreshLists();
+  return data.status;
+}
+
+async function showRunLogs(batchId, outcome) {
+  const box = $("logs");
+  box.replaceChildren();
+  const ids = await agentIds(batchId, outcome.run_id);
+  for (const agent of ids) {
+    const chain = await api(`/api/batches/${encodeURIComponent(batchId)}/runs/${encodeURIComponent(outcome.run_id)}/agents/${agent}`);
+    box.append(el("h3", { text: "Agent " + agent + " · " + chain.events.length + " events" }),
+      el("pre", { text: chain.events.map((e) => `#${e.seq} r${e.round ?? "-"} ${e.type} ${JSON.stringify(e.data)}`).join("\n") }));
+  }
+}
+
+async function agentIds(batchId, runId) {
+  const outcomes = (await api("/api/batches/" + encodeURIComponent(batchId))).outcomes;
+  const row = outcomes.find((o) => o.run_id === runId);
+  return [...new Set([...(row?.requesters ?? []), ...(row?.helpers ?? [])])];
+}
+
+refreshLists().then(() => {
+  const first = document.querySelector("#experiments button");
+  if (first) first.click();
+});
+</script>
+</body>
+</html>
