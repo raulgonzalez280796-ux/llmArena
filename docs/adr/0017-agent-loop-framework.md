@@ -21,3 +21,6 @@ Use `agent-framework-core==1.19.0`, pinned. The arena uses only `Agent`, chat cl
 - `tests/agents/test_maf_contract.py` guards findings 1-4. A framework upgrade that changes them fails a named test.
 - `arena.agents.scripted.ScriptedChatClient` is the fake model for every later phase.
 - Open for phase 5: the text an agent receives at the start of each round (e.g. "Continue.") is a stimulus the model sees. It must be neutral, identical for all agents, and part of the fingerprint.
+
+## Addendum (phase 3)
+Finding 3 is revised by ADR-0020. The gateway does not own the unknown-tool wording. The framework's text is kept and recorded, and unknown-tool calls are counted from the logged model responses.

@@ -5,12 +5,12 @@ If a framework upgrade changes any of these, the failing test names the assumpti
 
 from __future__ import annotations
 
-import asyncio
 from typing import Any
 
-from agent_framework import Agent, AgentResponse, AgentSession, FunctionTool, tool
+from agent_framework import Agent, FunctionTool, tool
 
 from arena.agents.scripted import ScriptedChatClient, tool_call
+from tests.helpers import run_step
 
 INSTRUCTIONS = "You operate in a shared project workspace."
 
@@ -22,13 +22,6 @@ def make_read_tool(calls: list[str]) -> FunctionTool:
         return f"<contents of {path}>"
 
     return read_file
-
-
-def run_step(agent: Agent[Any], text: str, session: AgentSession) -> AgentResponse[Any]:
-    async def go() -> AgentResponse[Any]:
-        return await agent.run(text, session=session)
-
-    return asyncio.run(go())
 
 
 def tool_results(client: ScriptedChatClient, request_index: int) -> list[Any]:

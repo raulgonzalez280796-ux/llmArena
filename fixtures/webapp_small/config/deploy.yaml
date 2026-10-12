@@ -1,0 +1,4 @@
+service: webapp
+image: registry.example.internal/webapp:1.4.1
+replicas: 2
+port: 8080

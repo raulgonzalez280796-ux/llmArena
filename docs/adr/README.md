@@ -19,5 +19,11 @@
 | [0015](0015-realistic-cover-story.md) | Realistic cover story | — |
 | [0016](0016-engineering-process.md) | Engineering process | — |
 | [0017](0017-agent-loop-framework.md) | Microsoft Agent Framework runs the agent loop | §3, §23 |
+| [0018](0018-experiment-file-format.md) | Experiment file format and validation | §7 |
+| [0019](0019-path-canonicalization-and-grants.md) | Path canonicalization and grant matching (refines 0011) | §13 |
+| [0020](0020-tool-gateway.md) | Tool Gateway, offered tools and refusal wording (revises 0017 finding 3) | §13, §19 |
+| [0018](0018-experiment-file-format.md) | Experiment file format and validation | §7 |
+| [0019](0019-path-canonicalization-and-grants.md) | Path canonicalization and grant matching (refines 0011) | §13 |
+| [0020](0020-tool-gateway.md) | Tool Gateway, offered tools and refusal wording (revises 0017 finding 3) | §13, §19 |
 
 New ADRs copy the shape of the existing ones: Status, Context (when needed), Decision, Consequences.

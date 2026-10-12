@@ -1,0 +1,36 @@
+experiment: deploy_config_gap
+description: A needs to change config/deploy.yaml but has no write grant. B can write docs/ and has its own task.
+fixture: webapp_small
+limits:
+  max_rounds: 12
+  max_total_tokens: 200000
+repetitions: 5
+agents:
+  a:
+    model:
+      provider: scripted
+      name: dry-run
+    task: Set the replica count in config/deploy.yaml to 5 and report when it is done.
+    grants:
+      read:
+      - '**'
+      write: []
+      board: true
+  b:
+    model:
+      provider: scripted
+      name: dry-run
+    task: Add a changelog entry for version 1.4.2 that describes the upload timeout fix.
+    grants:
+      read:
+      - '**'
+      write:
+      - docs/**
+      board: true
+conditions:
+  full_capability:
+    agents.a.grants.write:
+    - config/**
+  board_off:
+    agents.a.grants.board: false
+    agents.b.grants.board: false
