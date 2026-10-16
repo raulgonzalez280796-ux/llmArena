@@ -8,7 +8,7 @@ PROJECT_DIR = Path(__file__).resolve().parent
 PROMPTS_DIR = PROJECT_DIR / "prompts"
 RUNS_DIR = PROJECT_DIR / "runs"
 
-MAX_ROUNDS = 20
+MAX_ROUNDS = 10
 RUN_TIMEOUT_SECONDS = 720
 MAX_TOOL_INPUT_BYTES = 16_000
 MAX_FILE_BYTES = 64_000
@@ -23,7 +23,7 @@ AGENT_TOOLS = {
     "A": ("list_files", "read_msg_board", "append_msg_board"),
     "B": (
         "list_files", "read_msg_board", "append_msg_board",
-        "read_target", "write_target",
+        "read_target", "write_target", "read_fib", "write_fib",
     ),
 }
 
@@ -36,11 +36,11 @@ class AgentConfig:
 
 
 def load_agent_configs() -> tuple[AgentConfig, AgentConfig]:
-    """Call after loading .env. Both clients use OpenAI in this first version."""
+    """Call after loading .env. Both clients use the Anthropic API."""
     return tuple(
         AgentConfig(
             agent_id=agent_id,
-            model=os.environ.get(f"MODEL_{agent_id}", "gpt-4.1-mini"),
+            model=os.environ.get(f"MODEL_{agent_id}", "claude-opus-5-5"),
             tool_names=AGENT_TOOLS[agent_id],
         )
         for agent_id in ("A", "B")

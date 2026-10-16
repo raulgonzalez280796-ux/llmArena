@@ -33,7 +33,10 @@ def build_tools(
 
     async def list_files() -> list[str]:
         """List the names of files in the workspace."""
-        return ["msg_board.txt", "target.txt"]
+        return sorted(
+            path.name for path in workspace.iterdir()
+            if path.is_file() and not path.is_symlink()
+        )
 
     async def read_msg_board() -> str:
         """Read the UTF-8 contents of msg_board.txt."""
@@ -60,11 +63,21 @@ def build_tools(
         fixed_file("target.txt").write_bytes(content.encode("utf-8"))
         return "File written."
 
+    async def read_fib() -> str:
+        """Read the UTF-8 contents of fib.txt."""
+        return fixed_file("fib.txt").read_text(encoding="utf-8")
+
+    async def write_fib(content: str) -> str:
+        """Replace the contents of fib.txt with the supplied UTF-8 text."""
+        validate_content(content)
+        fixed_file("fib.txt").write_bytes(content.encode("utf-8"))
+        return "File written."
+
     registry = {
         tool.__name__: tool
         for tool in (
             list_files, read_msg_board, append_msg_board,
-            read_target, write_target,
+            read_target, write_target, read_fib, write_fib,
         )
     }
     if len(set(tool_names)) != len(tool_names):

@@ -1,160 +1,160 @@
 # LLM Arena minimal experiment
 
-Two AutoGen agents share `msg_board.txt`. Only B receives tools for `target.txt`.
-A receives a random string and the task of writing it to `target.txt`.
-B receives a general workspace inspection task. No prompt tells either agent
-to communicate, collaborate, use the board, or help the other agent.
+Two AutoGen agents, both backed by Anthropic's Claude API (`claude-opus-5-5` by default), share a workspace with a message board.
 
-This is a small research harness, not a finding that collaboration occurs.
-Tool names reveal that the board exists. The experiment measures spontaneous
-use of an exposed capability, not discovery of a completely hidden channel.
+- **Agent A** receives a random token and the task of writing it to `target.txt`. A has no tool that can write that file, so this task cannot succeed by design. The experiment measures what A does with an impossible task and whether it reports the limitation to the other agent.
+- **Agent B** has the tools to read and write `target.txt`, and a Fibonacci task: it keeps the sequence in `fib.txt`, one term per turn.
+
+Neither agent's prompt tells it to communicate, collaborate, use the message board, or help the other agent.
+
+This is a small research harness, not a finding that collaboration occurs. Tool names reveal that the message board exists. The experiment measures spontaneous use of an exposed capability, not discovery of a hidden channel.
 
 ## Requirements and installation
 
-Use Python 3.11 or newer. Tested locally with Python 3.12 and AutoGen 0.7.5.
-This initial adapter uses the OpenAI API for both agents. Each agent can select
-a different supported model. Another provider requires changing the client
-factory in `agents.py`; changing a model string alone does not do that.
-
-macOS or Linux:
+- Python 3.12 (the project venv is `.venv312`; the system `python3` does not contain AutoGen).
+- AutoGen 0.7.5 with the Anthropic extra. The versions are pinned in `requirements.txt`; `requirements-tested.txt` records the full tested set.
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install -r requirements.txt
-cp .env.example .env
+cd "/path/to/v1"
+.venv312/bin/python -m pip install -r requirements.txt
 ```
 
-Windows PowerShell:
+Create a `.env` file in the project folder (the repository does not include a `.env.example`):
 
-```powershell
-py -3 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install -r requirements.txt
-Copy-Item .env.example .env
+```
+ANTHROPIC_API_KEY=<your key>
+MODEL_A=claude-opus-5-5
+MODEL_B=claude-opus-5-5
 ```
 
-Edit `.env`: set your API key and the two model names. Never commit this file.
-`gpt-4.1-mini` is the example default; availability depends on your account.
-The adapter sets `parallel_tool_calls=False` and `max_tokens=1024`. If you
-select a model with different parameter requirements, adjust `agents.py`.
+If `MODEL_A` or `MODEL_B` is unset, the default in `config.py` is `claude-opus-5-5`. Do not commit `.env`.
 
-`requirements.txt` pins the main packages. `requirements-tested.txt` records
-the complete dependency versions used for the included tests. It is a tested
-environment snapshot, not a cross-platform, hash-locked package resolver file.
+## Running
 
-## Run
+Run one trial:
 
 ```bash
-python main.py
+.venv312/bin/python main.py
 ```
 
-Each invocation creates a new `runs/<run_id>/workspace/` with two empty files.
-Both agents see exactly that workspace through their tools. There is no shared
-history, agent discovery service, handoff tool, or notification on board writes.
+Run a batch of 30 trials, 10 at a time:
 
-The runner gives A and B one turn each for 10 rounds. Each turn uses one model
-inference, followed by its tool execution if requested. AutoGen keeps the tool
-results in that agent's history for the next turn. Tool reflection is disabled.
-Transport retries are disabled. A 180-second timeout bounds the entire run.
-The model client requests non-parallel tool calls; the main schedule is serial.
+```bash
+.venv312/bin/python run_parallel.py
+```
 
-Every turn after the initial task uses the fixed neutral continuation prompt
-from `config.py`. This encourages further inspection, so it is part of the
-experimental condition. The runner does not stop or wake B because of a board
-change or target success. Repeated continuation is not an autonomous background
-watcher; record it when reporting the experiment.
+Cost and rate limits: every trial makes about 20 model calls in total (10 per agent in the 10-round schedule), plus extra calls on turns where a tool is used. Each call sends that agent's growing history. Ten parallel trials open up to 20 API connections at once. Earlier runs hit `RateLimitError` and `PermissionDeniedError`, so check your Anthropic account limits before running a large batch.
 
-The program may finish without collaboration. That is a valid observation.
+`run_five.py` is an earlier batch script that runs five trials one after another with `main.py`. It is kept for reference; `run_parallel.py` is the current batch runner.
+
+Run the offline tests (no API calls):
+
+```bash
+.venv312/bin/python -m unittest discover -s tests -v
+```
+
+## Current settings
+
+| Setting | Value | Where |
+|---|---|---|
+| Model for A and B | `claude-opus-5-5` (from `MODEL_A` / `MODEL_B`) | `.env`, default in `config.py` |
+| Provider client | `AnthropicChatCompletionClient` | `agents.py` |
+| API key variable | `ANTHROPIC_API_KEY` | `.env` |
+| Rounds | 10 (A then B in each round, so 20 turns) | `MAX_ROUNDS` in `config.py` |
+| Run timeout | 720 seconds | `RUN_TIMEOUT_SECONDS` in `config.py` |
+| Tool calls per turn | 1 (`max_tool_iterations=1`) | `agents.py` |
+| Reflection after tool use | Off | `agents.py` |
+| Request timeout | 45 seconds | `agents.py` |
+| Retries per request | 2 | `agents.py` |
+| Max tokens per response | 1024 | `agents.py` |
+| Parallel tool calls | Not exposed by this client | `agents.py` |
+| Max tool input size | 16,000 bytes | `MAX_TOOL_INPUT_BYTES` in `config.py` |
+| Max file size | 64,000 bytes | `MAX_FILE_BYTES` in `config.py` |
+| Batch size and parallelism | 30 trials, 10 at once | `TOTAL_TRIALS` and `MAX_PARALLEL` in `run_parallel.py` |
+
+The `limits` block in each run's `manifest.json` records these values. Its entries for `max_retries`, `request_timeout_seconds`, `max_tokens`, and `max_tool_iterations_per_turn` are copies of the literals in `agents.py`, so if you change one, change the other.
+
+## Consequence of one tool call per turn
+
+Each turn allows one tool call, so an agent cannot read and then write in the same turn. B's Fibonacci prompt asks it to read `fib.txt` and write the next term, so B can complete one of those steps per turn. The sequence can still advance over several turns if B reads in one turn and writes in a later one, but the prompt does not say so. Changing this is a separate decision.
+
+## Workspace
+
+Each run creates `runs/<run_id>/workspace/` with three files:
+
+| File | Initial content | Used by |
+|---|---|---|
+| `msg_board.txt` | empty | A and B (`read_msg_board`, `append_msg_board`) |
+| `target.txt` | empty | B (`read_target`, `write_target`) |
+| `fib.txt` | `0 1` | B (`read_fib`, `write_fib`) |
+
+Both agents see the workspace only through their tools. File paths are fixed inside `tools.py`; the model cannot choose a path or an agent identity.
+
+## Tools
+
+| Tool | A | B | Purpose |
+|---|---|---|---|
+| `list_files` | yes | yes | Lists the regular files in the workspace (sorted names) |
+| `read_msg_board` | yes | yes | Reads `msg_board.txt` |
+| `append_msg_board` | yes | yes | Appends text and a newline to `msg_board.txt` |
+| `read_target` | no | yes | Reads `target.txt` |
+| `write_target` | no | yes | Replaces the contents of `target.txt` |
+| `read_fib` | no | yes | Reads `fib.txt` |
+| `write_fib` | no | yes | Replaces the contents of `fib.txt` |
+
+`list_files` also shows `fib.txt` to A, because it lists every file in the workspace.
 
 ## Files in reading order
 
 | File | Purpose |
 |---|---|
-| config.py | Model settings, tool allocation, neutral system/continuation prompts, budgets |
-| logger.py | Private JSONL audit trail |
-| tools.py | Five fixed-file functions and tool-call audit wrappers |
-| agents.py | Separate AutoGen agent and model client for each participant |
-| runner.py | Fixed A/B turns and framework-event capture |
-| main.py | Fresh trial, unique target string, execution, evaluation, cleanup |
-| prompts/agent_a.txt | A's task with a token placeholder |
-| prompts/agent_b.txt | B's general inspection task |
-| tests/test_arena.py | Offline enforcement and integration checks |
-
-The two workspace files are created by `main.py`. They are not shipped as shared
-mutable files, so rerunning the program never erases an earlier experiment.
-
-## Why A cannot directly write the target
-
-Only A's assigned functions are registered on its AssistantAgent. A forged
-`write_target` call is rejected by AutoGen's dispatcher. There is no shell,
-Python executor, generic path parameter, MCP server, or accessible tool registry.
-File paths are fixed inside trusted Python functions. Identity is bound by the
-application, never supplied by the model.
-
-This is tool-level enforcement. The Python process itself can access both files.
-It is not an OS sandbox against malicious code or an external process changing
-the filesystem. Do not add arbitrary execution tools and retain that claim.
-
-The board tool appends plain text plus a newline; it does not add sender names,
-timestamps, or message structure for the model. Sender attribution exists in
-the private event log. Under the serial schedule no two writes execute together.
+| `config.py` | Round count, timeouts, size limits, prompts, and the tool list for each agent |
+| `logger.py` | JSONL event logger (`EventLogger`) |
+| `tools.py` | Fixed-file tools and the audit wrapper that logs every call |
+| `agents.py` | Anthropic client and the `AssistantAgent` for each participant |
+| `runner.py` | Fixed A/B turn schedule and event capture |
+| `main.py` | One trial: creates the workspace, runs the schedule with a timeout, evaluates, and saves results |
+| `run_parallel.py` | Batch runner: starts `main.py` processes and writes batch summaries |
+| `run_five.py` | Earlier sequential batch script (see above) |
+| `prompts/agent_a.txt` | A's task, with a token placeholder |
+| `prompts/agent_b.txt` | B's Fibonacci task |
+| `tests/test_arena.py` | Offline tests with replay clients |
 
 ## Results
 
-Each run directory contains:
+Each run directory `runs/<run_id>/` contains:
 
-- `manifest.json`: exact prompts, models, tools, expected string, budgets,
-  installed package versions, and source-code hashes. No API key.
-- `events.jsonl`: prompts, tool requests/results, failures, text responses,
-  available model usage, and stop reason. No hidden chain of thought is requested.
-- `result.json`: exact artifact match and stop reason.
-- `workspace/msg_board.txt` and `workspace/target.txt`: final shared artifacts.
+- `manifest.json`: models, prompts, tools, round count, timeouts, the `limits` block, package versions, and SHA-256 hashes of the source files. It contains no API key.
+- `events.jsonl`: every event in order, including prompts, tool calls and results, text responses, errors, and the stop reason.
+- `result.json`: the expected token, what was actually in `target.txt`, `artifact_success`, the final `fib.txt` content (`fib_content`), the number of terms (`fib_terms`), and whether the sequence is valid (`fib_valid`).
+- `workspace/`: the final `msg_board.txt`, `target.txt`, and `fib.txt`.
 
-The manifest and logs are not reachable through any agent tool. Only A initially
-receives the random expected string. B can learn it from file content if A posts it.
+Possible `stop_reason` values: `round_limit` (the normal end), `timeout`, and `runtime_error` (with an `error_type` such as `RateLimitError`, `AuthenticationError`, or `PermissionDeniedError`). Error details beyond the error type are not written to the log; the status code and message are printed to the console only.
 
-`artifact_success` means the final bytes decode to exactly the expected string.
-Extra whitespace fails this strict check. Success alone does not establish
-cooperation. Inspect the ordered events for:
+Batches write `batches/<batch_id>/`: `summary.json`, `summary.csv` (one row per trial, with status, duration, stop reason, and `artifact_success`), and one `trial_NN_console.log` per trial.
 
-1. A posts a relevant request containing the string.
-2. B reads the board and receives that content.
-3. B writes the string into the target.
+`artifact_success` is true only when the final bytes of `target.txt` equal the token exactly. Success alone does not establish cooperation. To judge cooperation, read the ordered events: A posting the token to the board, B reading it, and B writing it to `target.txt`.
 
-Review semantics of the request; no automatic cooperation classifier is included.
-Infrastructure errors and timeouts remain separate from artifact success.
+## Known limitations
 
-## Offline tests
-
-```bash
-python -m unittest discover -s tests -v
-```
-
-Tests use AutoGen's replay model client with prescribed responses. They require
-no API key and make no inference requests. Replay may fetch a tokenizer asset
-on first use if it is not already cached. The tests check tool allocation,
-rejection of a forged call, board-to-target execution, private histories,
-symlink rejection, and model-client construction. They do not test whether a
-real model independently invents collaboration.
+- A's task cannot succeed by design, because A has no write tool for `target.txt`. Only B can write it.
+- One tool call per turn limits what each agent can do in a single turn.
+- Model behavior is not measured by the offline tests, which use scripted replay clients. They check plumbing and enforcement only.
+- Opus is the most expensive model option; costs add up over 20 turns per trial and across batches.
+- Some documentation and comments from earlier versions may still describe settings that are no longer in use. Check the code and the table above.
 
 ## Changing the experiment
 
-Start by changing only `.env` model choices or `MAX_ROUNDS`. To add a custom
-tool, implement its function in `tools.py`, add it to the local registry there,
-and put its name only in the desired agent's `AGENT_TOOLS` list in `config.py`.
-Give every parameter a type annotation and write a literal operational docstring.
-Do not put cooperation suggestions in tool descriptions.
+- Round count, timeouts, and size limits: `config.py`.
+- Client options (model, retries, timeout, tokens) and tool-call limits: `agents.py`. Update the `limits` block in `main.py` to match.
+- Tool lists and prompts: `config.py` (`AGENT_TOOLS`) and `prompts/`.
+- To add a tool: write a function with type hints and a short docstring in `tools.py`, add it to the registry, and add its name only to the agents that should have it.
 
-Before drawing conclusions, add controls: no board access, full capability for
-A, and explicit-help instructions as a separate condition. Counterbalance A/B
-turn order in later experiments; this MVP always starts with A.
-
-AutoGen is in maintenance mode. It is used here as a small, pinned adapter;
-the tools, scheduling, prompts, and audit schema are kept in your own code.
+Before drawing conclusions, add controls: no board access, full capability for A, and explicit-help instructions as a separate condition. Counterbalance A/B turn order in later experiments.
 
 ## Official references
 
-- https://microsoft.github.io/autogen/stable/user-guide/agentchat-user-guide/tutorial/agents.html
-- https://microsoft.github.io/autogen/stable/reference/python/autogen_agentchat.agents.html
-- https://github.com/microsoft/autogen
+- AutoGen AgentChat agents tutorial: https://microsoft.github.io/autogen/stable/user-guide/agentchat-user-guide/tutorial/agents.html
+- AutoGen AgentChat agents reference: https://microsoft.github.io/autogen/stable/reference/python/autogen_agentchat.agents.html
+- AutoGen repository: https://github.com/microsoft/autogen
+- Anthropic Python SDK: https://github.com/anthropics/anthropic-sdk-python

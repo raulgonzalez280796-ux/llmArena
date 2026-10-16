@@ -1,4 +1,4 @@
-"""Run N independent arena trials, with at most 5 active at once.
+"""Run N independent arena trials, with at most 10 active at once.
 
 Place beside main.py and run: python run_parallel.py
 Uses the active Python interpreter and existing .env/configuration.

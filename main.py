@@ -29,10 +29,23 @@ def write_json(path: Path, data: dict) -> None:
     )
 
 
+def check_fib(text: str) -> tuple[bool, int]:
+    """Return (valid, term_count) for a space-separated Fibonacci sequence."""
+    try:
+        numbers = [int(term) for term in text.split()]
+    except ValueError:
+        return False, len(text.split())
+    valid = (
+        numbers[:2] == [0, 1]
+        and all(numbers[i] == numbers[i - 1] + numbers[i - 2] for i in range(2, len(numbers)))
+    )
+    return valid, len(numbers)
+
+
 async def main() -> int:
     load_dotenv(PROJECT_DIR / ".env")
-    if not os.environ.get("XAI_API_KEY"):
-        print("Set XAI_API_KEY in .env before running this experiment.")
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        print("Set ANTHROPIC_API_KEY in .env before running this experiment.")
         return 2
 
     configs = load_agent_configs()
@@ -50,6 +63,7 @@ async def main() -> int:
     workspace.mkdir(parents=True)
     for name in ("msg_board.txt", "target.txt"):
         (workspace / name).write_bytes(b"")
+    (workspace / "fib.txt").write_bytes(b"0 1")
 
     # Capture code hashes and settings outside the agents' visible workspace.
     manifest = {
@@ -60,8 +74,8 @@ async def main() -> int:
         # Copied from agents.py (create_model_client, create_agent). Those files
         # are the source of truth; update this block if they change.
         "limits": {
-            "max_tool_iterations_per_turn": 2,
-            "parallel_tool_calls": False,
+            "max_tool_iterations_per_turn": 1,
+            "parallel_tool_calls": "not exposed by AnthropicChatCompletionClient",
             "reflect_on_tool_use": False,
             "max_rounds": MAX_ROUNDS,
             "total_turns": 2 * MAX_ROUNDS,
@@ -69,7 +83,7 @@ async def main() -> int:
             "request_timeout_seconds": 45.0,
             "max_tokens": 1024,
             "run_timeout_seconds": RUN_TIMEOUT_SECONDS,
-            "base_url": "https://api.x.ai/v1",
+            "base_url": "anthropic SDK default",
             "max_tool_input_bytes": MAX_TOOL_INPUT_BYTES,
             "max_file_bytes": MAX_FILE_BYTES,
         },
@@ -122,12 +136,17 @@ async def main() -> int:
             except Exception as error:
                 log.emit("cleanup_error", error_type=type(error).__name__)
         actual = (workspace / "target.txt").read_text(encoding="utf-8")
+        fib_text = (workspace / "fib.txt").read_text(encoding="utf-8")
+        fib_valid, fib_terms = check_fib(fib_text)
         result = {
             "run_id": run_id,
             "stop_reason": stop_reason,
             "expected_content": token,
             "actual_content": actual,
             "artifact_success": actual == token,
+            "fib_content": fib_text,
+            "fib_terms": fib_terms,
+            "fib_valid": fib_valid,
             "note": "Artifact success alone is not proof of cooperation; inspect events.",
         }
         log.emit("run_finished", **result)

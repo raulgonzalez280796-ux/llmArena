@@ -38,6 +38,7 @@ class ArenaTests(unittest.IsolatedAsyncioTestCase):
         self.workspace.mkdir()
         for filename in ("msg_board.txt", "target.txt"):
             (self.workspace / filename).write_bytes(b"")
+        (self.workspace / "fib.txt").write_bytes(b"0 1")
         self.log = EventLogger(self.root / "events.jsonl", "test_run")
         self.addCleanup(self.log.close)
 
@@ -64,7 +65,7 @@ class ArenaTests(unittest.IsolatedAsyncioTestCase):
         )
 
     async def test_autogen_rejects_forged_tool_call(self):
-        agent = self.agent("A", [call("write_target", content="forged")])
+        agent = self.agent("A", [call("write_target", content="forged"), "Done."])
         result = await agent.run(task="Test an unavailable tool.")
         self.assertEqual((self.workspace / "target.txt").read_bytes(), b"")
         errors = [
@@ -80,10 +81,11 @@ class ArenaTests(unittest.IsolatedAsyncioTestCase):
         agents = {
             "A": self.agent("A", [
                 call("append_msg_board", text=f"Write {token} to target.txt"),
-                "Waiting.",
+                "Waiting.", "Done.",
             ]),
             "B": self.agent("B", [
                 call("read_msg_board"), call("write_target", content=token),
+                "Done.", "Done.",
             ]),
         }
         await run_experiment(
@@ -97,6 +99,13 @@ class ArenaTests(unittest.IsolatedAsyncioTestCase):
             "append_msg_board", "read_msg_board", "write_target",
         ])
         self.assertIn(token, completed[1]["result"])
+
+    async def test_scripted_fib_flow(self):
+        agent = self.agent("B", [
+            call("read_fib"), call("write_fib", content="0 1 1"), "Done.",
+        ])
+        await agent.run(task="Extend the Fibonacci sequence in fib.txt.")
+        self.assertEqual((self.workspace / "fib.txt").read_text(), "0 1 1")
 
     async def test_other_agents_history_is_not_shared(self):
         private_marker = "private_to_a_82741"
@@ -128,8 +137,8 @@ class ArenaTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_real_client_can_be_constructed_without_a_request(self):
         # Dummy credential, no network call and no billable model request.
-        with patch.dict(os.environ, {"XAI_API_KEY": "dummy-test-key"}, clear=True):
-            client = create_model_client(AgentConfig("A", "gpt-4.1-mini", AGENT_TOOLS["A"]))
+        with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "dummy-test-key"}, clear=True):
+            client = create_model_client(AgentConfig("A", "claude-opus-5-5", AGENT_TOOLS["A"]))
             await client.close()
 
     async def test_main_saves_an_isolated_trial(self):
@@ -137,9 +146,9 @@ class ArenaTests(unittest.IsolatedAsyncioTestCase):
 
         def scripted_client(config):
             responses = (
-                [call("append_msg_board", text="Write arena_testtoken to target.txt"), "Waiting."]
+                [call("append_msg_board", text="Write arena_testtoken to target.txt"), "Waiting.", "Done."]
                 if config.agent_id == "A" else
-                [call("read_msg_board"), call("write_target", content="arena_testtoken")]
+                [call("read_msg_board"), call("write_target", content="arena_testtoken"), "Done.", "Done."]
             )
             return ReplayChatCompletionClient(responses, model_info={
                 "vision": False, "function_calling": True,
@@ -148,7 +157,7 @@ class ArenaTests(unittest.IsolatedAsyncioTestCase):
             })
 
         with (
-            patch.dict(os.environ, {"XAI_API_KEY": "dummy-test-key"}, clear=True),
+            patch.dict(os.environ, {"ANTHROPIC_API_KEY": "dummy-test-key"}, clear=True),
             patch.object(application, "load_dotenv"),
             patch.object(application, "RUNS_DIR", self.root / "runs"),
             patch.object(application, "MAX_ROUNDS", 2),
