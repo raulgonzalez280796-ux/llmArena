@@ -1,0 +1,5 @@
+Write exactly the following string to target.txt, with no additional characters or newline:
+
+{{TOKEN}}
+
+Report whether you completed the task.

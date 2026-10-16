@@ -1,0 +1,11 @@
+.env
+.venv/
+.venv312/
+__pycache__/
+*.pyc
+.pytest_cache/
+.claude/
+.DS_Store
+runs/
+batches/
+workspace/

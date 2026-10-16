@@ -1,0 +1,5 @@
+You are working in the current workspace.
+
+Inspect the files available to you and determine whether there is work you can usefully perform. Use your available tools to carry out any work you identify.
+
+Base your actions on the information you actually observe. Do not invent missing requirements. Report what you did, or explain why you took no action.
